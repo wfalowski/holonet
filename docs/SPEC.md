@@ -34,13 +34,14 @@ holonet/
 │   │   │   ├── config.ts          # zod-parsed env (fail fast)
 │   │   │   ├── db/
 │   │   │   │   ├── index.ts       # drizzle client factory
-│   │   │   │   └── schema.ts      # tables: tasks, runs
+│   │   │   │   └── schema.ts      # tables: tasks, runs, models
 │   │   │   ├── auth/
 │   │   │   │   ├── middleware.ts  # session-cookie auth middleware
 │   │   │   │   └── routes.ts      # POST /login, /logout, GET /me
 │   │   │   ├── api/
 │   │   │   │   ├── tasks.ts       # CRUD + toggle + run-now
-│   │   │   │   └── runs.ts        # activity log list
+│   │   │   │   ├── runs.ts        # activity log list
+│   │   │   │   └── models.ts      # model catalog CRUD
 │   │   │   ├── scheduler/
 │   │   │   │   ├── scheduler.ts   # croner registry, rebuild on task change
 │   │   │   │   └── executor.ts    # run pipeline: prompt → OpenRouter → Discord → run row
@@ -56,15 +57,14 @@ holonet/
 │       │   ├── main.tsx
 │       │   ├── App.tsx            # auth gate → console
 │       │   ├── api/client.ts      # typed fetch wrapper + query options
-│       │   ├── views/             # Overview, Tasks, Integrations, Activity
+│       │   ├── views/             # Overview, Tasks, Integrations, Activity, Settings
 │       │   ├── components/        # Rail, StatusBar, TaskDrawer, LoginScreen, chips…
 │       │   └── lib/               # cron describe/countdown helpers (from shared)
 │       └── package.json
 ├── packages/
-│   └── shared/            # zod schemas, API types, cron utils, model catalog
+│   └── shared/            # zod schemas, API types, cron utils
 │       └── src/
-│           ├── schemas.ts         # Task, TaskInput, Run, auth payloads
-│           ├── models.ts          # model catalog (OpenRouter ids + labels)
+│           ├── schemas.ts         # Task, TaskInput, Model, ModelInput, Run, auth payloads
 │           └── cron.ts            # describe(cron) → {ok, tag, text} (port from design file)
 ├── design/Holonet.dc.html # imported design reference
 ├── docs/SPEC.md
@@ -145,6 +145,13 @@ message     text notnull          // e.g. "digest compiled · 5 items relayed" /
 durationMs  integer notnull
 createdAt   timestamp with time zone notnull
 -- index runs(createdAt desc), index runs(taskId)
+
+// models (editable inference model catalog; seeded by migration)
+id          uuid pk default gen_random_uuid()
+modelId     text notnull unique   // OpenRouter id, e.g. "anthropic/claude-sonnet-4.5"
+label       text notnull          // display label, e.g. "SONNET 4.5"
+family      text notnull          // group heading, e.g. "ANTHROPIC"
+createdAt   timestamp with time zone notnull default now()
 ```
 
 Server code maps DB rows to the API contract at the boundary (`api/serialize.ts`): timestamps
@@ -169,23 +176,26 @@ proper status. Codes: `UNAUTHORIZED`, `NOT_FOUND`, `VALIDATION`, `RATE_LIMITED`,
 - `POST /api/tasks/:id/run` → `Run` (202-style: executes immediately, awaits completion, returns
   the run row; concurrent duplicate run of same task → 409 `CONFLICT`).
 - `GET  /api/runs?limit=80` → `Run[]` ordered createdAt desc (limit 1..200, default 80).
+- `GET  /api/models` → `Model[]` ordered by family/label; each entry carries
+  `inUse` (count of tasks bound to it).
+- `POST /api/models` `ModelInput` → `Model` (201); duplicate modelId → 409 `CONFLICT`.
+- `PATCH /api/models/:id` `{ label, family }` → `Model` (modelId immutable).
+- `DELETE /api/models/:id` → 204; 409 `CONFLICT` while any task uses it.
 
 `TaskInput` (zod): `name` 1..80 trimmed; `cron` must parse (validate with croner);
-`prompt` min 4; `model` must be in the shared model catalog; `webSearch`, `enabled`, `dedupe`
+`prompt` min 4; `model` must match the OpenRouter id shape (`vendor/model`) and exist in the
+`models` table (server-checked); `webSearch`, `enabled`, `dedupe`
 booleans; `webhookUrl` must match `^https://discord(app)?\.com/api/webhooks/.+`; `channel`
 trimmed, leading `#` stripped, default `"general"`; `format` enum; `sources` string[] (max 20,
 each 1..60).
 
-## Model catalog (`packages/shared/src/models.ts`)
+## Model catalog (DB-backed)
 
-```ts
-export const MODELS = [
-  { id: "anthropic/claude-sonnet-4.5", label: "SONNET 4.5", family: "ANTHROPIC" },
-  { id: "anthropic/claude-opus-4.1",   label: "OPUS 4.1",   family: "ANTHROPIC" },
-  { id: "x-ai/grok-4",                 label: "GROK 4",     family: "xAI" },
-  { id: "x-ai/grok-3",                 label: "GROK 3",     family: "xAI" },
-] as const;
-```
+The inference model catalog lives in the `models` table and is managed from the
+Settings view (`/api/models` CRUD). The initial migration seeds: SONNET 4.5,
+OPUS 4.1 (ANTHROPIC), GROK 4, GROK 3 (xAI). A model referenced by a task cannot
+be deleted. Shared zod schemas: `ModelSchema`, `ModelInputSchema`,
+`ModelUpdateSchema`, id shape `MODEL_ID_RE`.
 
 ## Scheduler & executor (critical path)
 
@@ -221,14 +231,15 @@ export const MODELS = [
   and resets go in a global `styles.css`.
 - Views: Overview (4 stat cards, upcoming dispatches, activity feed preview), Cron Tasks (filter
   tabs all/active/paused, table rows with run-now / toggle / edit), Integrations (Discord card
-  with live counts + Slack/Telegram "coming soon"), Activity (full log). Left rail nav with
+  with live counts + Slack/Telegram "coming soon"), Activity (full log), Settings (inference model
+  catalog: list with edit/remove + in-use counts, add-model form). Left rail nav with
   counts, status bar with active count, next dispatch and live clock (1 s tick).
 - Compose drawer (new/edit): callsign, cron input + 6 presets + live human description
-  (shared `describeCron`), directive textarea, model grid (from shared catalog), tools list
+  (shared `describeCron`), directive textarea, model grid (from /api/models), tools list
   (WEB SEARCH toggleable; RSS/URL FETCH locked), format tabs, dedupe checkbox, priority source
   chips (Enter adds), Discord webhook + channel inputs, enabled toggle, PURGE (edit only,
   with a confirm), DEPLOY/UPDATE. Validation errors as in design (callsign/cron/prompt).
-- Data: TanStack Query (`['tasks']`, `['runs']`), refetchInterval 15 s; countdowns/clock tick
+- Data: TanStack Query (`['tasks']`, `['runs']`, `['models']`), refetchInterval 15 s; countdowns/clock tick
   locally off `nextRunAt`. Mutations invalidate both keys. 401 from any request → flip to login.
 - Login screen: same aesthetic — HOLONET emblem, "ACCESS KEY" password input, error state on 401,
   rate-limit message on 429.
