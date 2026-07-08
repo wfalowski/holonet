@@ -1,0 +1,16 @@
+services:
+  holonet:
+    image: ghcr.io/wfalowski/holonet:latest
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      TZ: ${TZ:-Europe/Warsaw}
+    volumes:
+      - holonet-data:/data
+    restart: unless-stopped
+
+volumes:
+  holonet-data:

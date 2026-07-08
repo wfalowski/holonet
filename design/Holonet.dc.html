@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%;background:#080a0e}
+  body{font-family:'JetBrains Mono',ui-monospace,monospace;-webkit-font-smoothing:antialiased}
+  a{color:#ffb347;text-decoration:none}
+  a:hover{color:#ffd591}
+  input,textarea,button{font-family:inherit}
+  input:focus,textarea:focus{outline:none}
+  textarea{resize:none}
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-track{background:rgba(140,160,190,.04)}
+  ::-webkit-scrollbar-thumb{background:rgba(255,179,71,.22);border-radius:2px}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(255,179,71,.4)}
+  ::placeholder{color:#4d5769}
+  ::selection{background:rgba(255,179,71,.28)}
+  @keyframes scan{from{background-position:0 0}to{background-position:0 4px}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+  @keyframes slidein{from{transform:translateX(30px);opacity:0}to{transform:translateX(0);opacity:1}}
+  @keyframes flick{0%,100%{opacity:.85}50%{opacity:1}}
+</style>
+</helmet>
+
+<div style="position:relative;width:100vw;height:100vh;overflow:hidden;display:grid;grid-template-columns:236px 1fr;color:#e9edf4;background:radial-gradient(1200px 620px at 72% -12%, rgba(255,179,71,.07), transparent 60%),linear-gradient(rgba(140,160,190,.045) 1px, transparent 1px) 0 0/100% 40px,linear-gradient(90deg, rgba(140,160,190,.045) 1px, transparent 1px) 0 0/40px 100%,#080a0e;">
+
+  <sc-if value="{{ scanlines }}" hint-placeholder-val="{{ true }}">
+    <div style="position:fixed;inset:0;pointer-events:none;z-index:60;background:repeating-linear-gradient(rgba(0,0,0,0) 0 2px, rgba(0,0,0,.15) 2px 3px);animation:scan 6s linear infinite;opacity:.55;"></div>
+  </sc-if>
+
+  <!-- ===== LEFT RAIL ===== -->
+  <aside style="border-right:1px solid rgba(255,179,71,.16);display:flex;flex-direction:column;background:rgba(9,11,16,.72);backdrop-filter:blur(2px);position:relative;z-index:2;">
+    <div style="padding:20px 18px 18px;border-bottom:1px solid rgba(255,179,71,.14);">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="position:relative;width:30px;height:30px;flex:none;">
+          <div style="position:absolute;inset:0;border:1.5px solid #ffb347;transform:rotate(45deg);"></div>
+          <div style="position:absolute;inset:8px;background:#ffb347;transform:rotate(45deg);box-shadow:0 0 12px rgba(255,179,71,.7);animation:flick 3s ease-in-out infinite;"></div>
+        </div>
+        <div>
+          <div style="font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:16px;letter-spacing:.24em;line-height:1;">HOLONET</div>
+          <div style="font-size:8.5px;letter-spacing:.34em;color:#5c6678;margin-top:3px;">OPS CONSOLE · v2.6</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:14px 12px;display:flex;flex-direction:column;gap:3px;flex:1;">
+      <div style="font-size:8.5px;letter-spacing:.32em;color:#4d5769;padding:6px 8px 10px;">NAVIGATION</div>
+      <div style="display:flex;flex-direction:column;gap:3px;">
+        <button onClick="{{ navOverview.onClick }}" style="{{ navOverview.rowStyle }}">
+          <span style="{{ navOverview.barStyle }}"></span>
+          <span style="font-size:9px;letter-spacing:.14em;color:#5c6678;width:16px;">01</span>
+          <span style="font-family:'Chakra Petch',sans-serif;font-weight:600;font-size:12px;letter-spacing:.13em;flex:1;text-align:left;">OVERVIEW</span>
+        </button>
+        <button onClick="{{ navTasks.onClick }}" style="{{ navTasks.rowStyle }}">
+          <span style="{{ navTasks.barStyle }}"></span>
+          <span style="font-size:9px;letter-spacing:.14em;color:#5c6678;width:16px;">02</span>
+          <span style="font-family:'Chakra Petch',sans-serif;font-weight:600;font-size:12px;letter-spacing:.13em;flex:1;text-align:left;">CRON TASKS</span>
+          <span style="{{ navTasks.countStyle }}">{{ navTasks.count }}</span>
+        </button>
+        <button onClick="{{ navIntegrations.onClick }}" style="{{ navIntegrations.rowStyle }}">
+          <span style="{{ navIntegrations.barStyle }}"></span>
+          <span style="font-size:9px;letter-spacing:.14em;color:#5c6678;width:16px;">03</span>
+          <span style="font-family:'Chakra Petch',sans-serif;font-weight:600;font-size:12px;letter-spacing:.13em;flex:1;text-align:left;">INTEGRATIONS</span>
+          <span style="{{ navIntegrations.countStyle }}">1</span>
+        </button>
+        <button onClick="{{ navActivity.onClick }}" style="{{ navActivity.rowStyle }}">
+          <span style="{{ navActivity.barStyle }}"></span>
+          <span style="font-size:9px;letter-spacing:.14em;color:#5c6678;width:16px;">04</span>
+          <span style="font-family:'Chakra Petch',sans-serif;font-weight:600;font-size:12px;letter-spacing:.13em;flex:1;text-align:left;">ACTIVITY</span>
+          <span style="{{ navActivity.countStyle }}">{{ navActivity.count }}</span>
+        </button>
+      </div>
+    </div>
+
+    <div style="padding:14px 16px;border-top:1px solid rgba(255,179,71,.14);">
+      <div style="display:flex;align-items:center;gap:9px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:#5fe3a1;box-shadow:0 0 8px #5fe3a1;animation:pulse 2.4s ease-in-out infinite;flex:none;"></div>
+        <div style="min-width:0;">
+          <div style="font-size:11px;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ operator }}</div>
+          <div style="font-size:8.5px;letter-spacing:.24em;color:#5c6678;margin-top:2px;">CLEARANCE · OMEGA</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN COLUMN ===== -->
+  <div style="display:grid;grid-template-rows:54px 1fr;min-width:0;position:relative;z-index:1;">
+
+    <!-- STATUS BAR -->
+    <header style="border-bottom:1px solid rgba(255,179,71,.16);display:flex;align-items:center;gap:0;padding:0 20px;background:rgba(9,11,16,.55);">
+      <div style="display:flex;align-items:center;gap:9px;padding-right:20px;border-right:1px solid rgba(140,160,190,.14);height:100%;">
+        <span style="font-size:8.5px;letter-spacing:.28em;color:#5c6678;">SYS</span>
+        <span style="width:7px;height:7px;border-radius:50%;background:#5fe3a1;box-shadow:0 0 7px #5fe3a1;animation:pulse 2.4s ease-in-out infinite;"></span>
+        <span style="font-family:'Chakra Petch',sans-serif;font-weight:600;font-size:11px;letter-spacing:.14em;color:#5fe3a1;">NOMINAL</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:0 20px;border-right:1px solid rgba(140,160,190,.14);height:100%;">
+        <span style="font-size:8.5px;letter-spacing:.28em;color:#5c6678;">ACTIVE TASKS</span>
+        <span style="font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:14px;color:#ffb347;">{{ statActive }}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:0 20px;height:100%;">
+        <span style="font-size:8.5px;letter-spacing:.28em;color:#5c6678;">NEXT DISPATCH</span>
+        <span style="font-family:'Chakra Petch',sans-serif;font-weight:600;font-size:12px;letter-spacing:.06em;color:#e9edf4;">{{ statNextName }}</span>
+        <span style="font-size:11px;color:#ffb347;">{{ statNextCd }}</span>
+      </div>
+      <div style="flex:1;"></div>
+      <div style="text-align:right;padding-left:20px;border-left:1px solid rgba(140,160,190,.14);height:100%;display:flex;flex-direction:column;justify-content:center;">
+        <div style="font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:16px;letter-spacing:.1em;line-height:1;color:#e9edf4;">{{ clock }}</div>
+        <div style="font-size:8px;letter-spacing:.26em;color:#5c6678;margin-top:3px;">{{ clockDate }}</div>
+      </div>
+    </header>
+
+    <!-- CONTENT -->
+    <main style="overflow:auto;padding:26px 28px 40px;">
+
+      <!-- ============ OVERVIEW ============ -->
+      <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:20px;">
+          <span style="font-size:9px;letter-spacing:.3em;color:#5c6678;">// SECTOR 01</span>
+          <h1 style="font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:22px;letter-spacing:.14em;margin:0;">OVERVIEW</h1>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;">
+          <sc-for list="{{ statCards }}" as="c" hint-placeholder-count="4">
+            <div style="position:relative;border:1px solid rgba(255,179,71,.16);background:rgba(14,17,24,.75);padding:16px 16px 14px;overflow:hidden;">
+              <div style="position:absolute;top:0;left:0;width:16px;height:16px;border-top:1.5px solid rgba(255,179,71,.55);border-left:1.5px solid rgba(255,179,71,.55);"></div>
+              <div style="font-size:8.5px;letter-spacing:.26em;color:#5c6678;">{{ c.label }}</div>
+              <div style="font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:30px;letter-spacing:.02em;margin-top:8px;color:{{ c.color }};line-height:1;">{{ c.value }}</div>
+              <div style="font-size:9.5px;letter-spacing:.08em;color:#7a8496;margin-top:7px;">{{ c.sub }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <section style="border:1px solid rgba(255,179,71,.16);background:rgba(14,17,24,.6);">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 15px;border-bottom:1px solid rgba(255,179,71,.14);">
+              <span style="font-family:'Chakra Petch',sans-serif;font-weight:600;font-size:11px;letter-spacing:.2em;color:#e9edf4;">UPCOMING DISPATCHES</span>
+              <span style="font-size:8.5px;letter-spacing:.24em;color:#5c6678;">QUEUE</span>
+            </div>
+            <div style="padding:6px 0;">
+              <sc-for list="{{ upcoming }}" as="u" hint-placeholder-count="4">
+                <div style="display:grid;grid-template-columns:8px 1fr auto;gap:12px;align-items:center;padding:11px 15px;border-bottom:1px solid rgba(140,160,190,.07);">
+                  <span style="width:7px;height:7px;border-radius:50%;background:#ffb347;box-shadow:0 0 7px rgba(255,179,71,.7);"></span>
+                  <div style="min-width:0;">
+                    <div style="font-family:'Chakra Petch',sans-serif;font-weight:600;font-size:12px;letter-spacing:.08em;">{{ u.name }}</div>
+                    <div style="font-size:9.5px;color:#7a8496;margin-top:3px;">{{ u.meta }}</div>
+                  </div>
+                  <div style="text-align:right;">
+                    <div style="font-size:13px;color:#ffb347;letter-spacing:.04em;">{{ u.cd }}</div>
+                    <div style="font-size:9px;color:#5c6678;letter-spacing:.16em;margin-top:2px;">{{ u.tag }}</div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </section>
+
+          <section style="border:1px solid rgba(255,179,71,.16);background:rgba(14,17,24,.6);">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 15px;border-bottom:1px solid rgba(255,179,71,.14);">
+              <span style="font-family:'Chakra Petch',sans-serif;font-weight:600;font-size:11px;letter-spacing:.2em;color:#e9edf4;">ACTIVITY FEED</span>
+              <span style="font-size:8.5px;letter-spacing:.24em;color:#5fe3a1;">LIVE</span>
+            </div>
+            <div style="padding:4px 0;max-height:262px;overflow:auto;">
+              <sc-for list="{{ logPreview }}" as="l" hint-placeholder-count="5">
+                <div style="display:grid;grid-template-columns:auto 1fr;gap:11px;padding:8px 15px;border-bottom:1px solid rgba(140,160,190,.06);">
+                  <span style="font-size:10px;color:#5c6678;letter-spacing:.04em;padding-top:1px;">{{ l.time }}</span>
+                  <div style="min-width:0;">
+                    <div style="font-size:11px;letter-spacing:.03em;"><span style="{{ l.chip }}">{{ l.statusText }}</span> <span style="color:#c6cedb;">{{ l.job }}</span> <span style="color:#5c6678;">→ #{{ l.channel }}</span></div>
+                    <div style="font-size:9.5px;color:#7a8496;margin-top:2px;">{{ l.msg }}</div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </section>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ CRON TASKS ============ -->
+      <sc-if value="{{ isTasks }}" hint-placeholder-val="{{ true }}">
+      <div>
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:18px;gap:16px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:baseline;gap:12px;">
+            <span style="font-size:9px;letter-spacing:.3em;color:#5c6678;">// SECTOR 02</span>
+            <h1 style="font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:22px;letter-spacing:.14em;margin:0;">CRON TASKS</h1>
+            <span style="font-size:11px;color:#7a8496;letter-spacing:.06em;">[ {{ taskCount }} ]</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="display:flex;gap:2px;border:1px solid rgba(255,179,71,.18);padding:2px;">
+              <sc-for list="{{ filterTabs }}" as="t" hint-placeholder-count="3">
+                <button onClick="{{ t.onClick }}" style="{{ t.style }}">{{ t.label }}</button>
+              </sc-for>
+            </div>
+            <button onClick="{{ onNewTask }}" style="display:flex;align-items:center;gap:8px;background:#ffb347;color:#0a0c10;border:none;padding:9px 16px;font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:11px;letter-spacing:.16em;cursor:pointer;box-shadow:0 0 18px rgba(255,179,71,.35);">
+              <span style="font-size:14px;line-height:1;">+</span> NEW TASK
+            </button>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:12px minmax(120px,1.3fr) 134px 92px 108px 104px;gap:0;padding:0 16px 9px;border-bottom:1px solid rgba(255,179,71,.14);">
+          <span></span>
+          <span style="font-size:8.5px;letter-spacing:.24em;color:#5c6678;">TASK · PROMPT</span>
+          <span style="font-size:8.5px;letter-spacing:.24em;color:#5c6678;">SCHEDULE</span>
+          <span style="font-size:8.5px;letter-spacing:.24em;color:#5c6678;">CHANNEL</span>
+          <span style="font-size:8.5px;letter-spacing:.24em;color:#5c6678;text-align:right;">NEXT / LAST</span>
+          <span style="font-size:8.5px;letter-spacing:.24em;color:#5c6678;text-align:right;">STATE</span>
+        </div>
+
+        <div>
+          <sc-for list="{{ jobRows }}" as="row" hint-placeholder-count="4">
+            <div style="{{ row.rowStyle }}">
+              <span style="{{ row.dotStyle }}"></span>
+              <div style="min-width:0;padding-right:14px;">
+                <div style="font-family:'Chakra Petch',sans-serif;font-weight:600;font-size:13px;letter-spacing:.1em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ row.name }}</div>
+                <div style="display:flex;align-items:center;gap:7px;margin-top:6px;min-width:0;">
+                  <span style="flex:none;font-size:8px;letter-spacing:.08em;color:#8f7bd0;border:1px solid rgba(143,123,208,.4);padding:1px 5px;">{{ row.model }}</span>
+                  <sc-if value="{{ row.webOn }}" hint-placeholder-val="{{ false }}"><span style="flex:none;font-size:8px;letter-spacing:.08em;color:#5fe3a1;border:1px solid rgba(95,227,161,.35);padding:1px 5px;">WEB</span></sc-if>
+                  <span style="flex:0 1 auto;min-width:0;font-size:10px;color:#7a8496;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ row.prompt }}</span>
+                </div>
+              </div>
+              <div>
+                <div style="font-family:'Chakra Petch',sans-serif;font-weight:600;font-size:10px;letter-spacing:.16em;color:#ffb347;">{{ row.tag }}</div>
+                <div style="font-size:10px;color:#9aa6ba;margin-top:5px;">{{ row.schedule }}</div>
+                <div style="font-size:9px;color:#5c6678;margin-top:3px;">{{ row.cron }}</div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:#c6cedb;letter-spacing:.02em;">#{{ row.channel }}</div>
+                <div style="font-size:8.5px;letter-spacing:.16em;color:#5c6678;margin-top:5px;">DISCORD</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:13px;letter-spacing:.03em;color:{{ row.cdColor }};">{{ row.cd }}</div>
+                <div style="font-size:9.5px;margin-top:5px;"><span style="{{ row.lastChip }}">{{ row.lastStatus }}</span> <span style="color:#7a8496;">{{ row.last }}</span></div>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;">
+                <button title="RUN NOW" onClick="{{ row.onRun }}" style="background:none;border:1px solid rgba(140,160,190,.22);color:#9aa6ba;width:26px;height:26px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;padding:0;">&#8635;</button>
+                <button onClick="{{ row.onToggle }}" style="{{ row.trackStyle }}"><span style="{{ row.knobStyle }}"></span></button>
+                <button title="EDIT" onClick="{{ row.onEdit }}" style="background:none;border:none;color:#5c6678;cursor:pointer;font-size:15px;padding:0 2px;">&#9656;</button>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ INTEGRATIONS ============ -->
+      <sc-if value="{{ isIntegrations }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:20px;">
+          <span style="font-size:9px;letter-spacing:.3em;color:#5c6678;">// SECTOR 03</span>
+          <h1 style="font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:22px;letter-spacing:.14em;margin:0;">INTEGRATIONS</h1>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+          <div style="position:relative;border:1px solid rgba(255,179,71,.3);background:rgba(14,17,24,.75);padding:18px;overflow:hidden;">
+            <div style="position:absolute;top:0;right:0;width:16px;height:16px;border-top:1.5px solid rgba(255,179,71,.55);border-right:1.5px solid rgba(255,179,71,.55);"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:14px;letter-spacing:.14em;color:#8ea1ff;">DISCORD</span>
+              <span style="display:flex;align-items:center;gap:6px;font-size:9px;letter-spacing:.2em;color:#5fe3a1;"><span style="width:7px;height:7px;border-radius:50%;background:#5fe3a1;box-shadow:0 0 7px #5fe3a1;"></span>LINKED</span>
+            </div>
+            <div style="font-size:10px;color:#7a8496;margin-top:12px;letter-spacing:.04em;line-height:1.6;">Outbound webhook relay. Digests posted to your server channels on dispatch.</div>
+            <div style="margin-top:16px;border-top:1px solid rgba(140,160,190,.12);padding-top:12px;display:flex;justify-content:space-between;">
+              <div><div style="font-size:8.5px;letter-spacing:.22em;color:#5c6678;">BOUND TASKS</div><div style="font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:20px;color:#ffb347;margin-top:4px;">{{ discordCount }}</div></div>
+              <div><div style="font-size:8.5px;letter-spacing:.22em;color:#5c6678;">CHANNELS</div><div style="font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:20px;color:#e9edf4;margin-top:4px;">{{ discordChannels }}</div></div>
+            </div>
+          </div>
+          <sc-for list="{{ comingSoon }}" as="i" hint-placeholder-count="2">
+            <div style="border:1px dashed rgba(140,160,190,.18);background:rgba(14,17,24,.35);padding:18px;opacity:.65;">
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:14px;letter-spacing:.14em;color:#9aa6ba;">{{ i.name }}</span>
+                <span style="font-size:9px;letter-spacing:.2em;color:#5c6678;">OFFLINE</span>
+              </div>
+              <div style="font-size:10px;color:#5c6678;margin-top:12px;letter-spacing:.04em;line-height:1.6;">{{ i.desc }}</div>
+              <div style="margin-top:16px;font-size:9px;letter-spacing:.22em;color:#5c6678;border-top:1px solid rgba(140,160,190,.1);padding-top:12px;">STANDBY // Q3</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ ACTIVITY LOG ============ -->
+      <sc-if value="{{ isActivity }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:18px;">
+          <span style="font-size:9px;letter-spacing:.3em;color:#5c6678;">// SECTOR 04</span>
+          <h1 style="font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:22px;letter-spacing:.14em;margin:0;">ACTIVITY LOG</h1>
+        </div>
+        <div style="border:1px solid rgba(255,179,71,.16);background:rgba(14,17,24,.6);">
+          <sc-for list="{{ logRows }}" as="l" hint-placeholder-count="8">
+            <div style="display:grid;grid-template-columns:82px auto 1fr auto;gap:14px;align-items:center;padding:10px 16px;border-bottom:1px solid rgba(140,160,190,.06);">
+              <span style="font-size:10px;color:#5c6678;letter-spacing:.03em;">{{ l.time }}</span>
+              <span style="{{ l.chip }}">{{ l.statusText }}</span>
+              <div style="min-width:0;font-size:11px;"><span style="font-family:'Chakra Petch',sans-serif;font-weight:600;letter-spacing:.08em;">{{ l.job }}</span> <span style="color:#7a8496;">— {{ l.msg }}</span></div>
+              <span style="font-size:10px;color:#5c6678;">→ #{{ l.channel }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+    </main>
+  </div>
+
+  <!-- ===== COMPOSE DRAWER ===== -->
+  <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+  <div>
+    <div onClick="{{ onClose }}" style="position:absolute;inset:0;z-index:70;background:rgba(4,6,10,.68);backdrop-filter:blur(1.5px);"></div>
+    <aside style="position:absolute;top:0;right:0;height:100%;width:min(580px,94%);z-index:71;background:#0b0e14;border-left:1px solid rgba(255,179,71,.3);box-shadow:-30px 0 60px rgba(0,0,0,.5);display:flex;flex-direction:column;animation:slidein .24s cubic-bezier(.2,.8,.2,1);">
+      <div style="position:absolute;top:0;left:0;width:20px;height:20px;border-top:2px solid #ffb347;border-left:2px solid #ffb347;"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid rgba(255,179,71,.16);">
+        <div style="display:flex;align-items:baseline;gap:10px;">
+          <span style="font-size:9px;letter-spacing:.28em;color:#5c6678;">//</span>
+          <h2 style="font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:16px;letter-spacing:.16em;margin:0;">{{ drawerMode }}</h2>
+        </div>
+        <button onClick="{{ onClose }}" style="background:none;border:1px solid rgba(140,160,190,.24);color:#9aa6ba;width:30px;height:30px;cursor:pointer;font-size:15px;">&#10005;</button>
+      </div>
+
+      <div style="flex:1;overflow:auto;padding:22px;">
+
+        <!-- CALLSIGN -->
+        <label style="display:block;font-size:9px;letter-spacing:.26em;color:#5c6678;margin-bottom:8px;">TASK CALLSIGN</label>
+        <input value="{{ fName }}" onChange="{{ onName }}" placeholder="e.g. MORNING BRIEF" style="width:100%;background:rgba(140,160,190,.05);border:1px solid rgba(140,160,190,.2);border-bottom:1px solid {{ nameBorder }};color:#e9edf4;font-family:'Chakra Petch',sans-serif;font-weight:600;font-size:14px;letter-spacing:.1em;padding:11px 13px;text-transform:uppercase;">
+        <div style="{{ errNameStyle }}">{{ errName }}</div>
+
+        <!-- SCHEDULE -->
+        <label style="display:block;font-size:9px;letter-spacing:.26em;color:#5c6678;margin:22px 0 8px;">SCHEDULE // CRON PATTERN</label>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+          <sc-for list="{{ presets }}" as="p" hint-placeholder-count="6">
+            <button onClick="{{ p.onClick }}" style="background:rgba(255,179,71,.08);border:1px solid rgba(255,179,71,.24);color:#ffb347;font-size:9px;letter-spacing:.12em;padding:5px 9px;cursor:pointer;font-family:'Chakra Petch',sans-serif;font-weight:600;">{{ p.label }}</button>
+          </sc-for>
+        </div>
+        <input value="{{ fCron }}" onChange="{{ onCron }}" placeholder="0 9 * * *" style="width:100%;background:rgba(140,160,190,.05);border:1px solid {{ cronBorder }};color:#ffd591;font-size:16px;letter-spacing:.14em;padding:12px 13px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-top:9px;padding:10px 12px;background:{{ cronPreviewBg }};border:1px solid {{ cronBorder }};">
+          <span style="{{ cronTagStyle }}">{{ cronTag }}</span>
+          <span style="font-size:11px;color:{{ cronTextColor }};letter-spacing:.04em;">{{ cronDesc }}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:7px;">
+          <div style="text-align:center;font-size:8px;letter-spacing:.14em;color:#4d5769;">MIN</div>
+          <div style="text-align:center;font-size:8px;letter-spacing:.14em;color:#4d5769;">HOUR</div>
+          <div style="text-align:center;font-size:8px;letter-spacing:.14em;color:#4d5769;">DOM</div>
+          <div style="text-align:center;font-size:8px;letter-spacing:.14em;color:#4d5769;">MON</div>
+          <div style="text-align:center;font-size:8px;letter-spacing:.14em;color:#4d5769;">DOW</div>
+        </div>
+
+        <!-- PROMPT -->
+        <label style="display:block;font-size:9px;letter-spacing:.26em;color:#5c6678;margin:22px 0 8px;">DIRECTIVE // PROMPT</label>
+        <textarea value="{{ fPrompt }}" onChange="{{ onPrompt }}" rows="4" placeholder="Summarize the top headlines from the last 24h. Dedupe near-identical stories, 5 bullets max, cite each source." style="width:100%;background:rgba(140,160,190,.05);border:1px solid rgba(140,160,190,.2);border-left:2px solid {{ promptBorder }};color:#c6cedb;font-size:12px;line-height:1.65;padding:12px 13px;"></textarea>
+        <div style="{{ errPromptStyle }}">{{ errPrompt }}</div>
+
+        <!-- MODEL -->
+        <label style="display:block;font-size:9px;letter-spacing:.26em;color:#5c6678;margin:22px 0 8px;">INFERENCE MODEL</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
+          <sc-for list="{{ modelOptions }}" as="m" hint-placeholder-count="4">
+            <button onClick="{{ m.onClick }}" style="{{ m.style }}">
+              <span style="{{ m.famStyle }}">{{ m.fam }}</span>
+              <span style="font-family:'Chakra Petch',sans-serif;font-weight:600;font-size:12px;letter-spacing:.08em;">{{ m.label }}</span>
+            </button>
+          </sc-for>
+        </div>
+
+        <!-- TOOLS -->
+        <label style="display:block;font-size:9px;letter-spacing:.26em;color:#5c6678;margin:22px 0 8px;">TOOLS</label>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <sc-for list="{{ toolChips }}" as="t" hint-placeholder-count="3">
+            <button onClick="{{ t.onClick }}" style="{{ t.style }}">
+              <span style="{{ t.dotStyle }}"></span>
+              <div style="flex:1;text-align:left;">
+                <div style="font-family:'Chakra Petch',sans-serif;font-weight:600;font-size:12px;letter-spacing:.1em;color:{{ t.labelColor }};">{{ t.label }}</div>
+                <div style="font-size:9px;color:#5c6678;margin-top:2px;">{{ t.desc }}</div>
+              </div>
+              <span style="{{ t.stateStyle }}">{{ t.stateLabel }}</span>
+            </button>
+          </sc-for>
+        </div>
+
+        <!-- OUTPUT / NEWS OPTIONS -->
+        <label style="display:block;font-size:9px;letter-spacing:.26em;color:#5c6678;margin:22px 0 8px;">OUTPUT FORMAT</label>
+        <div style="display:flex;gap:6px;margin-bottom:12px;">
+          <sc-for list="{{ formatOptions }}" as="f" hint-placeholder-count="3">
+            <button onClick="{{ f.onClick }}" style="{{ f.style }}">{{ f.label }}</button>
+          </sc-for>
+        </div>
+        <button onClick="{{ onToggleDedupe }}" style="{{ dedupeRowStyle }}">
+          <span style="{{ dedupeBoxStyle }}">{{ dedupeCheck }}</span>
+          <div style="flex:1;text-align:left;"><div style="font-size:11px;letter-spacing:.06em;color:#c6cedb;">Dedupe near-identical headlines</div></div>
+        </button>
+
+        <label style="display:block;font-size:9px;letter-spacing:.26em;color:#5c6678;margin:18px 0 8px;">PRIORITY SOURCES</label>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+          <sc-for list="{{ sourceChips }}" as="s" hint-placeholder-count="3">
+            <span style="display:inline-flex;align-items:center;gap:7px;background:rgba(255,179,71,.08);border:1px solid rgba(255,179,71,.22);color:#ffd591;font-size:10px;letter-spacing:.06em;padding:5px 9px;">{{ s.label }}<button onClick="{{ s.onRemove }}" style="background:none;border:none;color:#a1794a;cursor:pointer;font-size:11px;padding:0;line-height:1;">&#10005;</button></span>
+          </sc-for>
+          <input value="{{ fSourceInput }}" onChange="{{ onSourceInput }}" onKeyDown="{{ onSourceKey }}" placeholder="+ add source" style="background:none;border:none;border-bottom:1px solid rgba(140,160,190,.22);color:#e9edf4;font-size:10px;letter-spacing:.06em;padding:5px 4px;width:110px;">
+        </div>
+
+        <!-- INTEGRATION -->
+        <label style="display:block;font-size:9px;letter-spacing:.26em;color:#5c6678;margin:24px 0 8px;">RELAY // INTEGRATION</label>
+        <div style="display:flex;gap:7px;margin-bottom:12px;">
+          <div style="flex:1;display:flex;align-items:center;gap:9px;border:1px solid rgba(142,161,255,.45);background:rgba(142,161,255,.08);padding:11px 13px;">
+            <span style="width:8px;height:8px;border-radius:50%;background:#8ea1ff;box-shadow:0 0 8px #8ea1ff;"></span>
+            <span style="font-family:'Chakra Petch',sans-serif;font-weight:600;font-size:12px;letter-spacing:.1em;color:#8ea1ff;">DISCORD WEBHOOK</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:9px;border:1px dashed rgba(140,160,190,.2);padding:11px 13px;opacity:.5;">
+            <span style="font-family:'Chakra Petch',sans-serif;font-weight:600;font-size:12px;letter-spacing:.1em;color:#9aa6ba;">SLACK</span>
+            <span style="font-size:8px;letter-spacing:.16em;color:#5c6678;">SOON</span>
+          </div>
+        </div>
+        <input value="{{ fWebhook }}" onChange="{{ onWebhook }}" placeholder="https://discord.com/api/webhooks/..." style="width:100%;background:rgba(140,160,190,.05);border:1px solid rgba(140,160,190,.2);color:#c6cedb;font-size:11px;letter-spacing:.02em;padding:11px 13px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;background:rgba(140,160,190,.05);border:1px solid rgba(140,160,190,.2);padding:0 13px;">
+          <span style="color:#5c6678;font-size:13px;">#</span>
+          <input value="{{ fChannel }}" onChange="{{ onChannel }}" placeholder="channel-name" style="flex:1;background:none;border:none;color:#e9edf4;font-size:12px;letter-spacing:.04em;padding:11px 8px;">
+        </div>
+
+      </div>
+
+      <!-- FOOTER -->
+      <div style="display:flex;align-items:center;gap:12px;padding:16px 22px;border-top:1px solid rgba(255,179,71,.16);background:rgba(9,11,16,.6);">
+        <button onClick="{{ onToggleEnabled }}" style="display:flex;align-items:center;gap:9px;background:none;border:none;cursor:pointer;padding:0;">
+          <span style="{{ enTrackStyle }}"><span style="{{ enKnobStyle }}"></span></span>
+          <span style="font-size:9px;letter-spacing:.16em;color:{{ enLabelColor }};font-family:'Chakra Petch',sans-serif;font-weight:600;">{{ enLabel }}</span>
+        </button>
+        <div style="flex:1;"></div>
+        <sc-if value="{{ canDelete }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ onPurge }}" style="background:none;border:1px solid rgba(255,93,108,.4);color:#ff5d6c;padding:10px 15px;font-family:'Chakra Petch',sans-serif;font-weight:600;font-size:10px;letter-spacing:.14em;cursor:pointer;">PURGE</button>
+        </sc-if>
+        <button onClick="{{ onSave }}" style="background:#ffb347;color:#0a0c10;border:none;padding:11px 22px;font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:11px;letter-spacing:.16em;cursor:pointer;box-shadow:0 0 18px rgba(255,179,71,.4);">{{ saveLabel }}</button>
+      </div>
+    </aside>
+  </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:&quot;100%&quot;},&quot;scanlines&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Display&quot;},&quot;operator&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;CDR. J. HALE&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Display&quot;}}">
+class Component extends DCLogic {
+  DAY = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  DAYFULL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+  blankForm(){
+    return { name:'', cron:'0 9 * * *', prompt:'', model:'claude-sonnet-4.5',
+      tools:{ webSearch:true }, enabled:true, integration:'discord',
+      webhook:'', channel:'', dedupe:true, format:'digest', sources:[], sourceInput:'' };
+  }
+
+  state = {
+    view:'overview', filter:'all', drawer:null, editingId:null, showErrors:false,
+    now: Date.now(),
+    form: this.blankForm(),
+    jobs: [
+      { id:'t1', name:'MORNING BRIEF', cron:'0 7 * * *', model:'claude-sonnet-4.5', tools:{webSearch:true}, enabled:true, channel:'daily-brief', webhook:'https://discord.com/api/webhooks/1180/xxxxx', dedupe:true, format:'digest', sources:['Reuters','AP','The Verge','Ars Technica'],
+        prompt:'Summarize the top world + technology headlines from the last 24h. Dedupe near-identical stories, keep 5 bullets max, cite each source link.' },
+      { id:'t2', name:'AI PULSE', cron:'0 */4 * * *', model:'grok-4', tools:{webSearch:true}, enabled:true, channel:'ai-news', webhook:'https://discord.com/api/webhooks/1180/yyyyy', dedupe:true, format:'bullets', sources:['arXiv','Hacker News','TechCrunch'],
+        prompt:'Scan for new AI model releases, research and funding news. Skip rumor, dedupe, post concise bullets with links.' },
+      { id:'t3', name:'MARKET CLOSE', cron:'30 21 * * 1-5', model:'claude-opus-4.1', tools:{webSearch:true}, enabled:true, channel:'markets', webhook:'https://discord.com/api/webhooks/1180/zzzzz', dedupe:true, format:'digest', sources:['Bloomberg','FT','WSJ'],
+        prompt:'End-of-day market recap: indices, movers, notable macro headlines. One tight digest, no filler.' },
+      { id:'t4', name:'WEEKLY DIGEST', cron:'0 9 * * 1', model:'claude-sonnet-4.5', tools:{webSearch:true}, enabled:false, channel:'digest', webhook:'https://discord.com/api/webhooks/1180/wwwww', dedupe:true, format:'digest', sources:['Stratechery','MIT Tech Review'],
+        prompt:'Weekly retrospective of the biggest stories across tech and world news. Group by theme, dedupe across the week.' }
+    ],
+    log: []
+  };
+
+  componentDidMount(){
+    const now = Date.now();
+    const jobs = this.state.jobs.map((j,i)=>({
+      ...j,
+      nextRunTs: this.nextRun(j.cron, now),
+      lastRunTs: j.enabled ? now - (i+1)*2760000 - 400000 : null,
+      lastStatus: 'ok'
+    }));
+    const seed = [
+      this._entry(jobs[0], now-2760000, 'ok'),
+      this._entry(jobs[1], now-3400000, 'ok'),
+      this._entry(jobs[2], now-5200000, 'ok'),
+      this._entry(jobs[1], now-7300000, 'fail'),
+      this._entry(jobs[0], now-89000000, 'ok'),
+      this._entry(jobs[2], now-91000000, 'ok')
+    ];
+    this.setState({ jobs, log: seed, now });
+    this._t = setInterval(()=>this.tick(), 1000);
+  }
+  componentWillUnmount(){ clearInterval(this._t); }
+
+  tick(){
+    const now = Date.now();
+    let changed = false; const add = [];
+    const jobs = this.state.jobs.map(j=>{
+      if(!j.nextRunTs) return j;
+      let nj = j, guard = 0;
+      while(nj.nextRunTs && nj.nextRunTs <= now && guard < 60){
+        guard++;
+        if(nj.enabled){
+          const status = Math.random() < 0.93 ? 'ok' : 'fail';
+          add.unshift(this._entry(nj, nj.nextRunTs, status));
+          nj = { ...nj, lastRunTs: nj.nextRunTs, lastStatus: status };
+        }
+        nj = { ...nj, nextRunTs: this.nextRun(nj.cron, nj.nextRunTs + 60000) };
+        changed = true;
+      }
+      return nj;
+    });
+    if(changed) this.setState(s=>({ now, jobs, log:[...add, ...s.log].slice(0,80) }));
+    else this.setState({ now });
+  }
+
+  _entry(job, ts, status){
+    const msgs = { digest:['digest compiled · 5 items relayed','digest posted · 4 stories','recap sent · 6 items'],
+      bullets:['6 bullets posted','5 bullets relayed','4 highlights sent'],
+      headlines:['headlines posted','7 headlines relayed'] };
+    const pool = msgs[job.format] || msgs.digest;
+    const msg = status==='ok' ? pool[Math.floor(Math.random()*pool.length)] : 'dispatch failed · retry queued';
+    return { id: Math.random().toString(36).slice(2), ts, job: job.name, channel: job.channel, status, msg };
+  }
+
+  pad2(n){ return String(n).padStart(2,'0'); }
+
+  expandField(expr, min, max){
+    if(expr === '*') { const s=new Set(); for(let i=min;i<=max;i++) s.add(i); return s; }
+    const out = new Set();
+    for(const part of expr.split(',')){
+      const [rangePart, stepStr] = part.split('/');
+      let step = 1;
+      if(stepStr !== undefined){ step = parseInt(stepStr,10); if(isNaN(step)||step<1) return null; }
+      let lo, hi;
+      if(rangePart === '*'){ lo=min; hi=max; }
+      else if(rangePart.includes('-')){ const [a,b]=rangePart.split('-'); lo=parseInt(a,10); hi=parseInt(b,10); }
+      else { lo=parseInt(rangePart,10); hi = (stepStr !== undefined) ? max : lo; }
+      if(isNaN(lo)||isNaN(hi)||lo<min||hi>max||lo>hi) return null;
+      for(let i=lo;i<=hi;i+=step) out.add(i);
+    }
+    return out;
+  }
+
+  parseCron(str){
+    const p = (str||'').trim().split(/\s+/);
+    if(p.length !== 5) return null;
+    const mi=this.expandField(p[0],0,59), ho=this.expandField(p[1],0,23),
+      dom=this.expandField(p[2],1,31), mon=this.expandField(p[3],1,12),
+      dowRaw=this.expandField(p[4],0,7);
+    if(!mi||!ho||!dom||!mon||!dowRaw) return null;
+    const dow=new Set(); dowRaw.forEach(d=> dow.add(d===7?0:d));
+    return { mi, ho, dom, mon, dow, domR: p[2]!=='*', dowR: p[4]!=='*' };
+  }
+
+  matches(d, c){
+    if(!c.mi.has(d.getMinutes())) return false;
+    if(!c.ho.has(d.getHours())) return false;
+    if(!c.mon.has(d.getMonth()+1)) return false;
+    const dm=c.dom.has(d.getDate()), dw=c.dow.has(d.getDay());
+    let dayOk;
+    if(c.domR && c.dowR) dayOk = dm || dw;
+    else if(c.domR) dayOk = dm;
+    else if(c.dowR) dayOk = dw;
+    else dayOk = true;
+    return dayOk;
+  }
+
+  nextRun(str, from){
+    const c = this.parseCron(str); if(!c) return null;
+    const d = new Date(from || Date.now());
+    d.setSeconds(0,0); d.setMinutes(d.getMinutes()+1);
+    for(let i=0;i<527040;i++){
+      if(this.matches(d,c)) return d.getTime();
+      d.setMinutes(d.getMinutes()+1);
+    }
+    return null;
+  }
+
+  describe(str){
+    const raw=(str||'').trim(); const p=raw.split(/\s+/);
+    if(p.length!==5) return { ok:false, tag:'INVALID', text:'Needs 5 fields: min hour dom mon dow' };
+    const c=this.parseCron(str);
+    if(!c) return { ok:false, tag:'INVALID', text:'Unrecognized field value' };
+    const [mi,ho,dom,mon,dow]=p;
+    const at=(h,m)=>this.pad2(h)+':'+this.pad2(m);
+    if(mi==='*'&&ho==='*'&&dom==='*'&&mon==='*'&&dow==='*') return {ok:true,tag:'REALTIME',text:'Every minute'};
+    let m1=/^\*\/(\d+)$/.exec(mi);
+    if(m1&&ho==='*'&&dom==='*'&&mon==='*'&&dow==='*') return {ok:true,tag:'EVERY '+m1[1]+'M',text:'Every '+m1[1]+' minutes'};
+    if(/^\d+$/.test(mi)&&ho==='*'&&dom==='*'&&mon==='*'&&dow==='*') return {ok:true,tag:'HOURLY',text:'Every hour at :'+this.pad2(+mi)};
+    let h2=/^\*\/(\d+)$/.exec(ho);
+    if(/^\d+$/.test(mi)&&h2&&dom==='*'&&mon==='*'&&dow==='*') return {ok:true,tag:'EVERY '+h2[1]+'H',text:'Every '+h2[1]+' hours at :'+this.pad2(+mi)};
+    if(/^\d+$/.test(mi)&&/^\d+$/.test(ho)&&dom==='*'&&mon==='*'){
+      const t=at(+ho,+mi);
+      if(dow==='*') return {ok:true,tag:'DAILY',text:'Every day at '+t};
+      if(dow==='1-5') return {ok:true,tag:'WEEKDAYS',text:'Weekdays at '+t};
+      if(dow==='0,6'||dow==='6,0'||dow==='6-7'||dow==='6,7') return {ok:true,tag:'WEEKENDS',text:'Weekends at '+t};
+      const arr=[...c.dow].sort((a,b)=>a-b);
+      if(arr.length===1) return {ok:true,tag:this.DAY[arr[0]],text:'Every '+this.DAYFULL[arr[0]]+' at '+t};
+      return {ok:true,tag:'WEEKLY',text:arr.map(d=>this.DAY[d]).join(', ')+' at '+t};
+    }
+    if(/^\d+$/.test(mi)&&/^\d+$/.test(ho)&&/^\d+$/.test(dom)&&mon==='*'&&dow==='*')
+      return {ok:true,tag:'MONTHLY',text:'Day '+dom+' of each month at '+at(+ho,+mi)};
+    return {ok:true,tag:'CUSTOM',text:'Custom schedule'};
+  }
+
+  countdown(ts, now){
+    if(!ts) return '—';
+    let diff = ts - now;
+    if(diff <= 0) return 'DISPATCHING';
+    let s=Math.floor(diff/1000);
+    const d=Math.floor(s/86400); s-=d*86400;
+    const h=Math.floor(s/3600); s-=h*3600;
+    const m=Math.floor(s/60); s-=m*60;
+    const t=this.pad2(h)+':'+this.pad2(m)+':'+this.pad2(s);
+    return d>0 ? ('T-'+d+'d '+t) : ('T-'+t);
+  }
+
+  relTime(ts, now){
+    if(!ts) return 'never';
+    const diff=now-ts; const s=Math.floor(diff/1000);
+    if(s<60) return 'just now';
+    if(s<3600) return Math.floor(s/60)+'m ago';
+    if(s<86400) return Math.floor(s/3600)+'h ago';
+    return Math.floor(s/86400)+'d ago';
+  }
+
+  modelLabel(id){
+    return {'claude-opus-4.1':'OPUS 4.1','claude-sonnet-4.5':'SONNET 4.5','grok-4':'GROK 4','grok-3':'GROK 3'}[id] || id;
+  }
+
+  // ---- actions ----
+  setView(v){ this.setState({view:v}); }
+  setFilter(f){ this.setState({filter:f}); }
+  openNew(){ this.setState({drawer:'new', editingId:null, showErrors:false, form:this.blankForm()}); }
+  openEdit(job){ this.setState({drawer:'edit', editingId:job.id, showErrors:false,
+    form:{...this.blankForm(), ...job, tools:{...job.tools}, sources:[...(job.sources||[])], sourceInput:''}}); }
+  closeDrawer(){ this.setState({drawer:null, showErrors:false}); }
+  updForm(k,v){ this.setState(s=>({form:{...s.form,[k]:v}})); }
+  toggleWeb(){ this.setState(s=>({form:{...s.form, tools:{...s.form.tools, webSearch:!s.form.tools.webSearch}}})); }
+  toggleDedupe(){ this.setState(s=>({form:{...s.form, dedupe:!s.form.dedupe}})); }
+  toggleEnabledForm(){ this.setState(s=>({form:{...s.form, enabled:!s.form.enabled}})); }
+  addSource(){ const v=(this.state.form.sourceInput||'').trim(); if(!v) return;
+    this.setState(s=>({form:{...s.form, sources:[...s.form.sources, v], sourceInput:''}})); }
+  removeSource(i){ this.setState(s=>({form:{...s.form, sources:s.form.sources.filter((_,idx)=>idx!==i)}})); }
+
+  toggleJob(id){ this.setState(s=>({jobs:s.jobs.map(j=>{
+    if(j.id!==id) return j; const en=!j.enabled;
+    return {...j, enabled:en, nextRunTs: en ? this.nextRun(j.cron, Date.now()) : j.nextRunTs };
+  })})); }
+
+  runNow(id){ this.setState(s=>{
+    const job=s.jobs.find(j=>j.id===id); if(!job) return {};
+    const e=this._entry(job, Date.now(), 'ok');
+    return { jobs:s.jobs.map(j=>j.id===id?{...j,lastRunTs:Date.now(),lastStatus:'ok'}:j), log:[e,...s.log].slice(0,80) };
+  }); }
+
+  purge(){ this.setState(s=>({jobs:s.jobs.filter(j=>j.id!==s.editingId), drawer:null})); }
+
+  save(){
+    const f=this.state.form; const d=this.describe(f.cron);
+    const valid = f.name.trim() && d.ok && f.prompt.trim().length>3;
+    if(!valid){ this.setState({showErrors:true}); return; }
+    const base={...f, name:f.name.trim(), channel:(f.channel||'').replace(/^#+/,'').trim()||'general', sourceInput:''};
+    if(this.state.drawer==='edit'){
+      this.setState(s=>({ jobs:s.jobs.map(j=> j.id===s.editingId ? {...j,...base, nextRunTs:this.nextRun(base.cron, Date.now())} : j), drawer:null, showErrors:false }));
+    } else {
+      const id='t'+Date.now();
+      const job={...base, id, nextRunTs:this.nextRun(base.cron, Date.now()), lastRunTs:null, lastStatus:'ok'};
+      this.setState(s=>({ jobs:[...s.jobs, job], drawer:null, showErrors:false }));
+    }
+  }
+
+  renderVals(){
+    const s=this.state, now=s.now;
+    const AMBER='#ffb347', OK='#5fe3a1', BAD='#ff5d6c', DIM='#5c6678', HI='#e9edf4';
+    const scanlines = this.props.scanlines ?? true;
+    const operator = this.props.operator ?? 'CDR. J. HALE';
+
+    const d=new Date(now);
+    const clock=this.pad2(d.getHours())+':'+this.pad2(d.getMinutes())+':'+this.pad2(d.getSeconds());
+    const wd=['SUN','MON','TUE','WED','THU','FRI','SAT'][d.getDay()];
+    const clockDate = wd+' '+d.getFullYear()+'.'+this.pad2(d.getMonth()+1)+'.'+this.pad2(d.getDate());
+
+    const activeJobs = s.jobs.filter(j=>j.enabled);
+    const startDay=new Date(now); startDay.setHours(0,0,0,0);
+    const runsToday = s.log.filter(l=>l.ts>=startDay.getTime()).length;
+
+    // ---- nav ----
+    const navDef=[
+      {id:'overview',code:'01',label:'OVERVIEW',count:''},
+      {id:'tasks',code:'02',label:'CRON TASKS',count:String(s.jobs.length)},
+      {id:'integrations',code:'03',label:'INTEGRATIONS',count:'1'},
+      {id:'activity',code:'04',label:'ACTIVITY',count:String(s.log.length)}
+    ];
+    const navObj={};
+    const navItems=navDef.map(n=>{
+      const on=s.view===n.id;
+      return { code:n.code, label:n.label, count:n.count,
+        onClick:()=>this.setView(n.id),
+        rowStyle:{ position:'relative', display:'flex', alignItems:'center', gap:'10px', padding:'10px 10px', border:'none', cursor:'pointer',
+          background: on?'rgba(255,179,71,.1)':'transparent', color: on?HI:'#9aa6ba' },
+        barStyle:{ position:'absolute', left:0, top:'20%', bottom:'20%', width:'2px', background: on?AMBER:'transparent', boxShadow: on?'0 0 8px '+AMBER:'none' },
+        countStyle:{ fontSize:'9px', letterSpacing:'.1em', color: on?AMBER:DIM, opacity:n.count?1:0 } };
+    });
+    navItems.forEach(it=>{ navObj[it.label]=it; });
+    const navByCode={ '01':'OVERVIEW','02':'CRON TASKS','03':'INTEGRATIONS','04':'ACTIVITY' };
+    const navOverview=navObj['OVERVIEW'], navTasks=navObj['CRON TASKS'], navIntegrations=navObj['INTEGRATIONS'], navActivity=navObj['ACTIVITY'];
+
+    // ---- job rows ----
+    const jobsFiltered = s.jobs.filter(j=> s.filter==='all' ? true : s.filter==='active' ? j.enabled : !j.enabled);
+    const jobRows = jobsFiltered.map(j=>{
+      const desc=this.describe(j.cron);
+      return {
+        name:j.name, model:this.modelLabel(j.model), webOn: !!(j.tools&&j.tools.webSearch),
+        prompt:j.prompt, tag:desc.tag, schedule:desc.text, cron:j.cron, channel:j.channel,
+        cd: j.enabled ? this.countdown(j.nextRunTs, now) : 'PAUSED',
+        cdColor: j.enabled ? AMBER : DIM,
+        last: this.relTime(j.lastRunTs, now),
+        lastStatus: j.lastRunTs ? (j.lastStatus==='ok'?'OK':'FAIL') : '—',
+        lastChip: { fontSize:'8px', letterSpacing:'.1em', padding:'1px 5px', border:'1px solid',
+          color: j.lastStatus==='fail'?BAD:OK, borderColor: j.lastStatus==='fail'?'rgba(255,93,108,.4)':'rgba(95,227,161,.4)' },
+        rowStyle:{ display:'grid', gridTemplateColumns:'12px minmax(120px,1.3fr) 134px 92px 108px 104px', gap:0, alignItems:'center',
+          padding:'15px 16px', borderBottom:'1px solid rgba(140,160,190,.08)', background: j.enabled?'transparent':'rgba(140,160,190,.02)', opacity: j.enabled?1:0.62 },
+        dotStyle:{ width:'8px', height:'8px', borderRadius:'50%',
+          background: j.enabled?OK:DIM, boxShadow: j.enabled?'0 0 8px '+OK:'none', animation: j.enabled?'pulse 2.4s ease-in-out infinite':'none' },
+        trackStyle:{ position:'relative', width:'40px', height:'20px', borderRadius:'2px', border:'1px solid '+(j.enabled?'rgba(255,179,71,.5)':'rgba(140,160,190,.28)'),
+          background: j.enabled?'rgba(255,179,71,.22)':'rgba(140,160,190,.08)', cursor:'pointer', padding:0 },
+        knobStyle:{ position:'absolute', top:'2px', left: j.enabled?'22px':'2px', width:'14px', height:'14px', borderRadius:'1px',
+          background: j.enabled?AMBER:'#7a8496', boxShadow: j.enabled?'0 0 8px '+AMBER:'none', transition:'left .16s, background .16s' },
+        onEdit:()=>this.openEdit(j), onToggle:()=>this.toggleJob(j.id), onRun:()=>this.runNow(j.id)
+      };
+    });
+
+    // ---- stat cards ----
+    const upcomingRaw=[...activeJobs].filter(j=>j.nextRunTs).sort((a,b)=>a.nextRunTs-b.nextRunTs);
+    const nextJob=upcomingRaw[0];
+    const statCards=[
+      { label:'ACTIVE TASKS', value:String(activeJobs.length), sub:s.jobs.length+' total configured', color:AMBER },
+      { label:'DISPATCHES · 24H', value:String(runsToday), sub:'relayed to discord', color:HI },
+      { label:'NEXT DISPATCH', value: nextJob? this.describe(nextJob.cron).tag : '—', sub: nextJob? nextJob.name : 'no active tasks', color:AMBER },
+      { label:'RELAY STATUS', value:'LINKED', sub:'discord · nominal', color:OK }
+    ];
+    const upcoming=upcomingRaw.slice(0,5).map(j=>({ name:j.name, meta:this.modelLabel(j.model)+' · #'+j.channel,
+      cd:this.countdown(j.nextRunTs, now), tag:this.describe(j.cron).tag }));
+
+    // ---- log ----
+    const chip=(st)=>({ fontSize:'8.5px', letterSpacing:'.1em', padding:'1px 6px', border:'1px solid',
+      color: st==='fail'?BAD:OK, borderColor: st==='fail'?'rgba(255,93,108,.4)':'rgba(95,227,161,.4)' });
+    const fmtLog=(l)=>{ const t=new Date(l.ts); return { time:this.pad2(t.getHours())+':'+this.pad2(t.getMinutes())+':'+this.pad2(t.getSeconds()),
+      job:l.job, channel:l.channel, msg:l.msg, statusText:l.status==='fail'?'FAIL':'OK', chip:chip(l.status) }; };
+    const logSorted=[...s.log].sort((a,b)=>b.ts-a.ts);
+    const logRows=logSorted.map(fmtLog);
+    const logPreview=logSorted.slice(0,7).map(fmtLog);
+
+    // ---- integrations ----
+    const discordCount=s.jobs.length;
+    const discordChannels=new Set(s.jobs.map(j=>j.channel)).size;
+    const comingSoon=[
+      {name:'SLACK', desc:'Post digests to Slack channels via incoming webhooks.'},
+      {name:'TELEGRAM', desc:'Relay briefs to a Telegram bot / channel.'}
+    ];
+
+    // ---- drawer / form ----
+    const f=s.form, cdesc=this.describe(f.cron), se=s.showErrors;
+    const nameErr = se && !f.name.trim();
+    const promptErr = se && f.prompt.trim().length<=3;
+    const cronBad = se && !cdesc.ok;
+
+    const cronTag = cdesc.ok ? { fontFamily:"'Chakra Petch',sans-serif", fontWeight:600, fontSize:'9px', letterSpacing:'.14em', padding:'2px 7px', background:'rgba(255,179,71,.15)', color:AMBER, border:'1px solid rgba(255,179,71,.35)' }
+      : { fontFamily:"'Chakra Petch',sans-serif", fontWeight:600, fontSize:'9px', letterSpacing:'.14em', padding:'2px 7px', background:'rgba(255,93,108,.12)', color:BAD, border:'1px solid rgba(255,93,108,.35)' };
+
+    const modelDefs=[
+      {id:'claude-sonnet-4.5',label:'SONNET 4.5',fam:'ANTHROPIC'},
+      {id:'claude-opus-4.1',label:'OPUS 4.1',fam:'ANTHROPIC'},
+      {id:'grok-4',label:'GROK 4',fam:'xAI'},
+      {id:'grok-3',label:'GROK 3',fam:'xAI'}
+    ];
+    const modelOptions=modelDefs.map(m=>{ const on=f.model===m.id; return {
+      label:m.label, fam:m.fam, onClick:()=>this.updForm('model',m.id),
+      style:{ display:'flex', flexDirection:'column', gap:'4px', alignItems:'flex-start', padding:'10px 12px', cursor:'pointer',
+        border:'1px solid '+(on?'rgba(255,179,71,.55)':'rgba(140,160,190,.18)'), background: on?'rgba(255,179,71,.1)':'rgba(140,160,190,.04)', color: on?HI:'#9aa6ba' },
+      famStyle:{ fontSize:'8px', letterSpacing:'.2em', color: on?AMBER:DIM } };
+    });
+
+    const toolDefs=[
+      {id:'web',label:'WEB SEARCH',desc:'Live retrieval across the open web',locked:false},
+      {id:'rss',label:'RSS FEEDS',desc:'Poll subscribed source feeds',locked:true},
+      {id:'fetch',label:'URL FETCH',desc:'Read specific article URLs',locked:true}
+    ];
+    const toolChips=toolDefs.map(t=>{
+      const on = t.id==='web' ? !!f.tools.webSearch : false;
+      const disabled=t.locked;
+      return { label:t.label, desc:t.desc,
+        onClick: disabled ? (()=>{}) : (()=>this.toggleWeb()),
+        labelColor: disabled?'#6b7488':(on?HI:'#9aa6ba'),
+        style:{ display:'flex', alignItems:'center', gap:'11px', padding:'11px 13px', cursor: disabled?'not-allowed':'pointer', textAlign:'left',
+          border:'1px solid '+(on?'rgba(95,227,161,.4)':'rgba(140,160,190,.16)'), background: on?'rgba(95,227,161,.06)':'rgba(140,160,190,.03)', opacity: disabled?0.5:1 },
+        dotStyle:{ width:'8px', height:'8px', borderRadius:'50%', flex:'none', background: on?OK:'#4d5769', boxShadow: on?'0 0 8px '+OK:'none' },
+        stateLabel: disabled?'LOCKED':(on?'ENABLED':'OFF'),
+        stateStyle:{ fontSize:'8.5px', letterSpacing:'.14em', fontFamily:"'Chakra Petch',sans-serif", fontWeight:600,
+          color: disabled?DIM:(on?OK:DIM) } };
+    });
+
+    const fmtDefs=[{id:'digest',label:'DIGEST'},{id:'bullets',label:'BULLETS'},{id:'headlines',label:'HEADLINES'}];
+    const formatOptions=fmtDefs.map(o=>{ const on=f.format===o.id; return { label:o.label, onClick:()=>this.updForm('format',o.id),
+      style:{ flex:1, padding:'9px 6px', cursor:'pointer', fontFamily:"'Chakra Petch',sans-serif", fontWeight:600, fontSize:'10px', letterSpacing:'.12em',
+        border:'1px solid '+(on?'rgba(255,179,71,.5)':'rgba(140,160,190,.18)'), background: on?'rgba(255,179,71,.12)':'transparent', color: on?AMBER:'#9aa6ba' } };
+    });
+
+    const presetDefs=[['EVERY 15M','*/15 * * * *'],['HOURLY','0 * * * *'],['EVERY 4H','0 */4 * * *'],['DAILY 07:00','0 7 * * *'],['WEEKDAYS 08:00','0 8 * * 1-5'],['MON 09:00','0 9 * * 1']];
+    const presets=presetDefs.map(([label,cron])=>({ label, onClick:()=>this.updForm('cron',cron) }));
+
+    const sourceChips=(f.sources||[]).map((sname,i)=>({ label:sname, onRemove:()=>this.removeSource(i) }));
+
+    const filterDefs=[['all','ALL'],['active','ACTIVE'],['paused','PAUSED']];
+    const filterTabs=filterDefs.map(([id,label])=>{ const on=s.filter===id; return { label, onClick:()=>this.setFilter(id),
+      style:{ padding:'6px 12px', border:'none', cursor:'pointer', fontFamily:"'Chakra Petch',sans-serif", fontWeight:600, fontSize:'9.5px', letterSpacing:'.14em',
+        background: on?'rgba(255,179,71,.16)':'transparent', color: on?AMBER:'#7a8496' } };
+    });
+
+    return {
+      scanlines, operator, clock, clockDate,
+      statActive:String(activeJobs.length),
+      statNextName: nextJob? nextJob.name : '—',
+      statNextCd: nextJob? this.countdown(nextJob.nextRunTs, now) : '',
+      isOverview:s.view==='overview', isTasks:s.view==='tasks', isIntegrations:s.view==='integrations', isActivity:s.view==='activity',
+      navOverview, navTasks, navIntegrations, navActivity,
+      statCards, upcoming, logPreview, logRows,
+      taskCount: jobsFiltered.length, filterTabs, jobRows, onNewTask:()=>this.openNew(),
+      discordCount, discordChannels, comingSoon,
+      // drawer
+      drawerOpen: s.drawer!==null, drawerMode: s.drawer==='edit'?'EDIT TASK':'NEW TASK', saveLabel: s.drawer==='edit'?'UPDATE':'DEPLOY',
+      canDelete: s.drawer==='edit', onClose:()=>this.closeDrawer(), onSave:()=>this.save(), onPurge:()=>this.purge(),
+      fName:f.name, fCron:f.cron, fPrompt:f.prompt, fWebhook:f.webhook, fChannel:f.channel, fSourceInput:f.sourceInput,
+      onName:e=>this.updForm('name', e.target.value), onCron:e=>this.updForm('cron', e.target.value),
+      onPrompt:e=>this.updForm('prompt', e.target.value), onWebhook:e=>this.updForm('webhook', e.target.value),
+      onChannel:e=>this.updForm('channel', e.target.value.replace(/^#+/,'')),
+      onSourceInput:e=>this.updForm('sourceInput', e.target.value),
+      onSourceKey:e=>{ if(e.key==='Enter'){ e.preventDefault(); this.addSource(); } },
+      cronDesc:cdesc.text, cronTag:cdesc.tag, cronTagStyle:cronTag,
+      cronTextColor: cdesc.ok?'#c6cedb':BAD,
+      cronBorder: cronBad?'rgba(255,93,108,.6)':(cdesc.ok?'rgba(255,179,71,.35)':'rgba(140,160,190,.2)'),
+      cronPreviewBg: cdesc.ok?'rgba(255,179,71,.05)':'rgba(255,93,108,.06)',
+      nameBorder: nameErr?BAD:'rgba(140,160,190,.2)',
+      promptBorder: promptErr?BAD:'rgba(255,179,71,.4)',
+      errName: nameErr?'▸ CALLSIGN REQUIRED':'', errNameStyle:{ fontSize:'9px', letterSpacing:'.1em', color:BAD, marginTop:'5px', height: nameErr?'auto':'0', overflow:'hidden' },
+      errPrompt: promptErr?'▸ DIRECTIVE REQUIRED':'', errPromptStyle:{ fontSize:'9px', letterSpacing:'.1em', color:BAD, marginTop:'5px', height: promptErr?'auto':'0', overflow:'hidden' },
+      modelOptions, toolChips, formatOptions, presets, sourceChips,
+      onToggleDedupe:()=>this.toggleDedupe(), dedupeCheck: f.dedupe?'✓':'',
+      dedupeRowStyle:{ display:'flex', alignItems:'center', gap:'11px', width:'100%', padding:'10px 0', background:'none', border:'none', cursor:'pointer' },
+      dedupeBoxStyle:{ width:'18px', height:'18px', flex:'none', border:'1px solid '+(f.dedupe?'rgba(255,179,71,.6)':'rgba(140,160,190,.3)'), background: f.dedupe?'rgba(255,179,71,.18)':'transparent', color:AMBER, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px' },
+      onToggleEnabled:()=>this.toggleEnabledForm(), enLabel: f.enabled?'ENABLED':'PAUSED', enLabelColor: f.enabled?OK:DIM,
+      enTrackStyle:{ position:'relative', width:'40px', height:'20px', borderRadius:'2px', border:'1px solid '+(f.enabled?'rgba(95,227,161,.5)':'rgba(140,160,190,.28)'), background: f.enabled?'rgba(95,227,161,.2)':'rgba(140,160,190,.08)', display:'inline-block' },
+      enKnobStyle:{ position:'absolute', top:'2px', left: f.enabled?'22px':'2px', width:'14px', height:'14px', borderRadius:'1px', background: f.enabled?OK:'#7a8496', boxShadow: f.enabled?'0 0 8px '+OK:'none', transition:'left .16s' }
+    };
+  }
+}
+</script>
+</body>
+</html>
