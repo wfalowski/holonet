@@ -383,6 +383,8 @@ git commit -m "feat(server): models table with seeded default catalog"
 **Files:**
 - Create: `apps/server/src/api/models.ts`
 - Create: `apps/server/src/api/models.test.ts`
+- Create: `apps/server/src/api/test-helpers.ts` (shared pglite app harness, extracted from `tasks.test.ts`)
+- Modify: `apps/server/src/api/tasks.test.ts` (use the shared harness)
 - Modify: `apps/server/src/api/serialize.ts` (add `rowToModel`)
 - Modify: `apps/server/src/api/tasks.ts` (membership check in POST `/` and PUT `/:id`)
 - Modify: `apps/server/src/app.ts:70-71` (mount route)
@@ -397,13 +399,14 @@ git commit -m "feat(server): models table with seeded default catalog"
   - Task create/update with a model absent from the catalog → 400 VALIDATION `Unknown model — add it in Settings first`
   - `createModelsRoutes(db: Db): Hono`; `rowToModel(row: ModelRow, inUse: number): Model`
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Extract the shared test harness**
 
-Create `apps/server/src/api/models.test.ts` (same harness as `tasks.test.ts`):
+The pglite app harness currently lives inline in `tasks.test.ts` (lines 14-28) and would be duplicated verbatim by the new test file — extract it instead.
+
+Create `apps/server/src/api/test-helpers.ts`:
 
 ```ts
 import assert from "node:assert/strict";
-import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
@@ -417,12 +420,15 @@ import { createScheduler } from "../scheduler/scheduler.js";
 
 const MIGRATIONS = fileURLToPath(new URL("../../drizzle", import.meta.url));
 
-async function buildApp() {
+export const TEST_APP_KEY = "test-app-key-123456";
+
+/** Fresh in-memory Postgres + migrated schema + fully wired Hono app. */
+export async function buildApp() {
   const client = new PGlite();
   const db = drizzle(client, { schema });
   await migrate(db, { migrationsFolder: MIGRATIONS });
   const config = loadConfig({
-    APP_KEY: "test-app-key-123456",
+    APP_KEY: TEST_APP_KEY,
     OPENROUTER_API_KEY: "x",
   });
   const executor = createExecutor({ db, config, logger });
@@ -431,20 +437,40 @@ async function buildApp() {
   return { app, scheduler };
 }
 
-async function loginHeaders(app: Awaited<ReturnType<typeof buildApp>>["app"]) {
+/** Log in and return the session-cookie headers for authenticated requests. */
+export async function loginHeaders(
+  app: Awaited<ReturnType<typeof buildApp>>["app"],
+): Promise<{ Cookie: string }> {
   const login = await app.request("/api/auth/login", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "x-forwarded-for": "1.2.3.4",
     },
-    body: JSON.stringify({ key: "test-app-key-123456" }),
+    body: JSON.stringify({ key: TEST_APP_KEY }),
   });
   assert.equal(login.status, 204);
   const setCookie = login.headers.get("set-cookie");
   assert.ok(setCookie);
   return { Cookie: (setCookie as string).split(";")[0] as string };
 }
+```
+
+Then refactor `apps/server/src/api/tasks.test.ts` to use it: delete its local `buildApp` (lines 14-28) and the now-unused imports (`fileURLToPath`, `PGlite`, `drizzle`, `migrate`, `createApp`, `loadConfig`, `schema`, `logger`, `createExecutor`, `createScheduler`), add `import { buildApp, loginHeaders } from "./test-helpers.js";`, and replace its inline login block (lines 51-63) with `const auth = await loginHeaders(app);`. Behavior must not change.
+
+Run: `pnpm --filter @holonet/server exec node --import tsx --test src/api/tasks.test.ts`
+Expected: PASS (refactor is behavior-neutral).
+
+(`test-helpers.ts` does not match the quoted `"src/**/*.test.ts"` glob, so it never runs as a suite.)
+
+- [ ] **Step 2: Write the failing test**
+
+Create `apps/server/src/api/models.test.ts`:
+
+```ts
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { buildApp, loginHeaders } from "./test-helpers.js";
 
 const validTask = {
   name: "Test Task",
@@ -597,12 +623,12 @@ test("models API: CRUD, seed, conflicts, task membership check", async () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 3: Run test to verify it fails**
 
 Run: `pnpm --filter @holonet/shared build && pnpm --filter @holonet/server exec node --import tsx --test src/api/models.test.ts`
 Expected: FAIL — `/api/models` returns 404 (route not mounted).
 
-- [ ] **Step 3: Add `rowToModel` to the serializer**
+- [ ] **Step 4: Add `rowToModel` to the serializer**
 
 In `apps/server/src/api/serialize.ts`, extend the shared import with `type Model` and the schema import with `ModelRow`:
 
@@ -633,7 +659,7 @@ export function rowToModel(row: ModelRow, inUse: number): Model {
 }
 ```
 
-- [ ] **Step 4: Implement the routes**
+- [ ] **Step 5: Implement the routes**
 
 Create `apps/server/src/api/models.ts`:
 
@@ -753,7 +779,7 @@ export function createModelsRoutes(db: Db): Hono {
 
 Note: the `models` table has a DB uuid default on `id`, but PGlite + drizzle inserts pass it explicitly (matches the `tasks` route convention with `randomUUID()`). `createdAt` relies on the `defaultNow()` column default.
 
-- [ ] **Step 5: Enforce catalog membership on task create/update**
+- [ ] **Step 6: Enforce catalog membership on task create/update**
 
 In `apps/server/src/api/tasks.ts`:
 
@@ -788,7 +814,7 @@ In `app.post("/", ...)`, insert directly after the `if (!parsed.success) { ... }
 
 Insert the identical block in `app.put("/:id", ...)` directly after its `if (!parsed.success) { ... }` block (after current line 110).
 
-- [ ] **Step 6: Mount the route**
+- [ ] **Step 7: Mount the route**
 
 In `apps/server/src/app.ts`, add the import:
 
@@ -802,21 +828,22 @@ and after `api.route("/tasks", ...)` (line 70) add:
   api.route("/models", createModelsRoutes(db));
 ```
 
-- [ ] **Step 7: Run tests to verify they pass**
+- [ ] **Step 8: Run tests to verify they pass**
 
 Run: `pnpm --filter @holonet/server exec node --import tsx --test src/api/models.test.ts`
 Expected: PASS.
 
 Run: `pnpm test` (root)
-Expected: PASS — including the pre-existing `tasks.test.ts` (its `validTask` uses seeded `anthropic/claude-sonnet-4.5`, so the membership check passes).
+Expected: PASS — including the refactored `tasks.test.ts` (its `validTask` uses seeded `anthropic/claude-sonnet-4.5`, so the membership check passes).
 
-- [ ] **Step 8: Verify repo green and commit**
+- [ ] **Step 9: Verify repo green and commit**
 
 Run: `pnpm exec biome check --write . && pnpm check && pnpm typecheck && pnpm build`
 Expected: all pass.
 
 ```bash
-git add apps/server/src/api/models.ts apps/server/src/api/models.test.ts apps/server/src/api/serialize.ts apps/server/src/api/tasks.ts apps/server/src/app.ts
+git add apps/server/src/api
+git add apps/server/src/app.ts
 git commit -m "feat(server): /api/models CRUD with in-use guard and task catalog check"
 ```
 
