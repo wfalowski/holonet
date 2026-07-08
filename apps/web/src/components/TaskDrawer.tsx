@@ -5,7 +5,7 @@ import {
   type TaskFormat,
   type TaskInput,
 } from "@holonet/shared";
-import { type KeyboardEvent, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import {
   AMBER,
   BAD,
@@ -139,6 +139,15 @@ export function TaskDrawer({
   function updForm<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
+
+  // The models list arrives async; if the drawer opened before it resolved,
+  // back-fill the default selection once models are available.
+  useEffect(() => {
+    const first = models[0];
+    if (!form.model && first) {
+      setForm((f) => (f.model ? f : { ...f, model: first.modelId }));
+    }
+  }, [form.model, models]);
 
   function addSource() {
     const v = form.sourceInput.trim();
