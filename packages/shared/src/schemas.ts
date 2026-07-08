@@ -1,9 +1,37 @@
 import { z } from "zod";
 import { isValidCron } from "./cron.js";
-import { MODEL_IDS } from "./models.js";
 
 export const TaskFormat = z.enum(["digest", "bullets", "headlines"]);
 export type TaskFormat = z.infer<typeof TaskFormat>;
+
+// OpenRouter model id shape, e.g. "anthropic/claude-sonnet-4.5" or
+// "meta-llama/llama-4-maverick:free". Catalog membership is enforced
+// server-side against the models table.
+export const MODEL_ID_RE = /^[\w.-]+\/[\w.:-]+$/;
+
+export const ModelInputSchema = z.object({
+  modelId: z
+    .string()
+    .trim()
+    .max(100)
+    .regex(MODEL_ID_RE, "Expected an OpenRouter model id like vendor/model"),
+  label: z.string().trim().min(1).max(40),
+  family: z.string().trim().min(1).max(20),
+});
+export type ModelInput = z.infer<typeof ModelInputSchema>;
+
+export const ModelUpdateSchema = ModelInputSchema.omit({ modelId: true });
+export type ModelUpdate = z.infer<typeof ModelUpdateSchema>;
+
+export const ModelSchema = z.object({
+  id: z.string(),
+  modelId: z.string(),
+  label: z.string(),
+  family: z.string(),
+  createdAt: z.number(),
+  inUse: z.number(),
+});
+export type Model = z.infer<typeof ModelSchema>;
 
 export const TaskInputSchema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -12,7 +40,11 @@ export const TaskInputSchema = z.object({
       "Invalid cron expression (expected 5 fields: min hour dom mon dow)",
   }),
   prompt: z.string().min(4),
-  model: z.enum(MODEL_IDS),
+  model: z
+    .string()
+    .trim()
+    .max(100)
+    .regex(MODEL_ID_RE, "Invalid model id (expected vendor/model)"),
   webSearch: z.boolean(),
   enabled: z.boolean(),
   webhookUrl: z
@@ -37,7 +69,7 @@ export const TaskSchema = z.object({
   name: z.string(),
   cron: z.string(),
   prompt: z.string(),
-  model: z.enum(MODEL_IDS),
+  model: z.string(),
   webSearch: z.boolean(),
   enabled: z.boolean(),
   webhookUrl: z.string(),

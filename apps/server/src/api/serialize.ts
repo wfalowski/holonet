@@ -1,5 +1,4 @@
 import {
-  type ModelId,
   nextRun,
   type Run,
   type RunStatus,
@@ -18,7 +17,7 @@ export function rowToTask(row: TaskRow, lastRun: LastRun): Task {
     name: row.name,
     cron: row.cron,
     prompt: row.prompt,
-    model: row.model as ModelId,
+    model: row.model,
     webSearch: row.webSearch,
     enabled: row.enabled,
     webhookUrl: row.webhookUrl,

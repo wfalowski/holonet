@@ -1,7 +1,6 @@
 import {
   describeCron,
   MODELS,
-  type ModelId,
   type Task,
   type TaskFormat,
   type TaskInput,
@@ -62,7 +61,7 @@ interface FormState {
   name: string;
   cron: string;
   prompt: string;
-  model: ModelId;
+  model: string;
   webSearch: boolean;
   enabled: boolean;
   webhookUrl: string;
