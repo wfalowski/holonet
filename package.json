@@ -5,8 +5,8 @@
   "packageManager": "pnpm@11.10.0",
   "scripts": {
     "check": "biome check .",
-    "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test",
+    "typecheck": "pnpm --filter @holonet/shared build && pnpm -r typecheck",
+    "test": "pnpm --filter @holonet/shared build && pnpm -r test",
     "build": "pnpm --filter @holonet/shared build && pnpm --filter @holonet/web build && pnpm --filter @holonet/server build",
     "dev": "pnpm -r --parallel dev"
   },
