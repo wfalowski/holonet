@@ -4,7 +4,7 @@ import {
   type ModelInput,
   type ModelUpdate,
 } from "@holonet/shared";
-import { type CSSProperties, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 import {
   AMBER,
   BAD,
@@ -63,7 +63,7 @@ const dangerButton: CSSProperties = {
 
 interface SettingsViewProps {
   models: Model[];
-  onCreate: (input: ModelInput) => void;
+  onCreate: (input: ModelInput) => Promise<unknown>;
   onUpdate: (id: string, input: ModelUpdate) => void;
   onDelete: (id: string) => void;
   isSaving: boolean;
@@ -87,6 +87,13 @@ export function SettingsView({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const deleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useEffect(
+    () => () => {
+      if (deleteTimer.current) clearTimeout(deleteTimer.current);
+    },
+    [],
+  );
+
   const modelIdErr = showAddErrors && !MODEL_ID_RE.test(addForm.modelId.trim());
   const labelErr = showAddErrors && !addForm.label.trim();
   const familyErr = showAddErrors && !addForm.family.trim();
@@ -99,9 +106,14 @@ export function SettingsView({
       setShowAddErrors(true);
       return;
     }
-    onCreate({ modelId, label, family });
-    setAddForm({ modelId: "", label: "", family: "" });
-    setShowAddErrors(false);
+    onCreate({ modelId, label, family })
+      .then(() => {
+        setAddForm({ modelId: "", label: "", family: "" });
+        setShowAddErrors(false);
+      })
+      .catch(() => {
+        // error toast is handled by the mutation's onError; keep the form values
+      });
   }
 
   function startEdit(m: Model) {
@@ -362,6 +374,8 @@ export function SettingsView({
               }
               placeholder="vendor/model"
               maxLength={100}
+              aria-invalid={modelIdErr}
+              aria-describedby={modelIdErr ? "settings-add-error" : undefined}
               style={fieldInput(modelIdErr)}
             />
           </div>
@@ -377,6 +391,8 @@ export function SettingsView({
               }
               placeholder="e.g. SONNET 4.5"
               maxLength={40}
+              aria-invalid={labelErr}
+              aria-describedby={labelErr ? "settings-add-error" : undefined}
               style={fieldInput(labelErr)}
             />
           </div>
@@ -392,6 +408,8 @@ export function SettingsView({
               }
               placeholder="e.g. ANTHROPIC"
               maxLength={20}
+              aria-invalid={familyErr}
+              aria-describedby={familyErr ? "settings-add-error" : undefined}
               style={fieldInput(familyErr)}
             />
           </div>
@@ -417,6 +435,8 @@ export function SettingsView({
           </button>
         </div>
         <div
+          id="settings-add-error"
+          role="alert"
           style={{
             fontSize: "9px",
             letterSpacing: ".1em",

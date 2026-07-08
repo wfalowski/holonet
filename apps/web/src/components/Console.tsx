@@ -210,7 +210,7 @@ export function Console() {
           {view === "settings" && (
             <SettingsView
               models={models}
-              onCreate={(input) => createModelMutation.mutate(input)}
+              onCreate={(input) => createModelMutation.mutateAsync(input)}
               onUpdate={(id, input) =>
                 updateModelMutation.mutate({ id, input })
               }
