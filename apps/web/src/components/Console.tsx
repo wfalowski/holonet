@@ -58,6 +58,7 @@ export function Console() {
   function invalidateAll() {
     queryClient.invalidateQueries({ queryKey: ["tasks"] });
     queryClient.invalidateQueries({ queryKey: ["runs"] });
+    queryClient.invalidateQueries({ queryKey: ["models"] });
   }
 
   const createMutation = useMutation({
