@@ -13,7 +13,9 @@ const EnvSchema = z.object({
   APP_KEY: z.string().min(16, "must be at least 16 characters"),
   OPENROUTER_API_KEY: z.string().min(1, "is required"),
   SESSION_SECRET: z.string().min(1).optional(),
-  DATABASE_PATH: z.string().default("./data/holonet.db"),
+  DATABASE_URL: z
+    .string()
+    .default("postgres://holonet:holonet@localhost:5432/holonet"),
   PORT: z
     .string()
     .default("3000")
@@ -35,7 +37,7 @@ export interface Config {
   appKey: string;
   openrouterApiKey: string;
   sessionSecret: string;
-  databasePath: string;
+  databaseUrl: string;
   port: number;
   cookieSecure: boolean;
   trustProxy: boolean;
@@ -61,7 +63,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     appKey: data.APP_KEY,
     openrouterApiKey: data.OPENROUTER_API_KEY,
     sessionSecret,
-    databasePath: data.DATABASE_PATH,
+    databaseUrl: data.DATABASE_URL,
     port: data.PORT,
     cookieSecure: data.COOKIE_SECURE,
     trustProxy: data.TRUST_PROXY,

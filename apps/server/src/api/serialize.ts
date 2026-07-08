@@ -10,8 +10,8 @@ import type { RunRow, TaskRow } from "../db/schema.js";
 
 export type LastRun = { at: number; status: RunStatus } | null;
 
-// Map a task DB row to the API Task shape: parse the JSON sources column, expose
-// timestamps as epoch ms, and attach the computed nextRunAt / lastRun.
+// Map a task DB row to the API Task shape: expose timestamps as epoch ms and
+// attach the computed nextRunAt / lastRun.
 export function rowToTask(row: TaskRow, lastRun: LastRun): Task {
   return {
     id: row.id,
@@ -25,7 +25,7 @@ export function rowToTask(row: TaskRow, lastRun: LastRun): Task {
     channel: row.channel,
     dedupe: row.dedupe,
     format: row.format as TaskFormat,
-    sources: JSON.parse(row.sources) as string[],
+    sources: row.sources,
     createdAt: row.createdAt.getTime(),
     updatedAt: row.updatedAt.getTime(),
     nextRunAt: row.enabled ? nextRun(row.cron) : null,

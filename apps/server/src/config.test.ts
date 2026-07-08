@@ -9,7 +9,10 @@ test("loadConfig: applies defaults and derives SESSION_SECRET", () => {
     OPENROUTER_API_KEY: "sk-or-test",
   });
   assert.equal(config.port, 3000);
-  assert.equal(config.databasePath, "./data/holonet.db");
+  assert.equal(
+    config.databaseUrl,
+    "postgres://holonet:holonet@localhost:5432/holonet",
+  );
   assert.equal(config.cookieSecure, false);
   assert.equal(
     config.sessionSecret,

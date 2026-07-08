@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { PGlite } from "@electric-sql/pglite";
+import { drizzle } from "drizzle-orm/pglite";
+import { migrate } from "drizzle-orm/pglite/migrator";
 import { createApp } from "../app.js";
 import { loadConfig } from "../config.js";
 import * as schema from "../db/schema.js";
@@ -13,10 +13,10 @@ import { createScheduler } from "../scheduler/scheduler.js";
 
 const MIGRATIONS = fileURLToPath(new URL("../../drizzle", import.meta.url));
 
-function buildApp() {
-  const sqlite = new Database(":memory:");
-  const db = drizzle(sqlite, { schema });
-  migrate(db, { migrationsFolder: MIGRATIONS });
+async function buildApp() {
+  const client = new PGlite();
+  const db = drizzle(client, { schema });
+  await migrate(db, { migrationsFolder: MIGRATIONS });
   const config = loadConfig({
     APP_KEY: "test-app-key-123456",
     OPENROUTER_API_KEY: "x",
@@ -42,7 +42,7 @@ const validTask = {
 };
 
 test("tasks API: create -> list -> toggle -> delete, guarded by auth", async () => {
-  const { app, scheduler } = buildApp();
+  const { app, scheduler } = await buildApp();
 
   // Unauthenticated requests are rejected.
   const noAuth = await app.request("/api/tasks");

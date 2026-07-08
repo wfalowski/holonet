@@ -56,7 +56,7 @@ export function createScheduler({
 
   return {
     async start(): Promise<void> {
-      const rows = db.select().from(tasks).where(eq(tasks.enabled, true)).all();
+      const rows = await db.select().from(tasks).where(eq(tasks.enabled, true));
       for (const task of rows) schedule(task);
       logger.info({ count: rows.length }, "scheduler started");
     },

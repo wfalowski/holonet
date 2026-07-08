@@ -12,7 +12,7 @@ const QuerySchema = z.object({
 export function createRunsRoutes(db: Db): Hono {
   const app = new Hono();
 
-  app.get("/", (c) => {
+  app.get("/", async (c) => {
     const parsed = QuerySchema.safeParse({ limit: c.req.query("limit") });
     if (!parsed.success) {
       return c.json(
@@ -26,12 +26,11 @@ export function createRunsRoutes(db: Db): Hono {
       );
     }
 
-    const rows = db
+    const rows = await db
       .select()
       .from(runs)
       .orderBy(desc(runs.createdAt))
-      .limit(parsed.data.limit)
-      .all();
+      .limit(parsed.data.limit);
     return c.json(rows.map(rowToRun));
   });
 

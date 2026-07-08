@@ -1,18 +1,26 @@
-import { mkdirSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
+import { Pool } from "pg";
 import * as schema from "./schema.js";
 
-export type Db = ReturnType<typeof drizzle<typeof schema>>;
+// Structural type both the node-postgres driver (production) and the PGlite
+// driver (tests) satisfy, so handlers/scheduler/executor can depend on a
+// single Db type regardless of which driver constructed it.
+export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 
-export function createDb(path: string): Db {
-  const resolved = resolve(path);
-  mkdirSync(dirname(resolved), { recursive: true });
-  const sqlite = new Database(resolved);
-  sqlite.pragma("journal_mode = WAL");
-  sqlite.pragma("foreign_keys = ON");
-  return drizzle(sqlite, { schema });
+export interface DbHandle {
+  db: NodePgDatabase<typeof schema>;
+  pool: Pool;
+}
+
+export function createDb(databaseUrl: string): DbHandle {
+  const pool = new Pool({ connectionString: databaseUrl });
+  const db = drizzle(pool, { schema });
+  return { db, pool };
+}
+
+export async function closeDb(pool: Pool): Promise<void> {
+  await pool.end();
 }
 
 export * from "./schema.js";

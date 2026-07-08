@@ -20,8 +20,8 @@ cp .env.example .env
 docker compose up -d
 ```
 
-The app is available at `http://localhost:3000`. Data (SQLite DB) persists in the
-`holonet-data` Docker volume, mounted at `/data`.
+The app is available at `http://localhost:3000`. Data persists in Postgres, running as the
+`postgres` service and backed by the `holonet-pgdata` Docker volume.
 
 ## Local development
 
@@ -46,7 +46,7 @@ Other useful scripts (run from the repo root):
 ## Architecture
 
 - **Server:** [Hono](https://hono.dev) REST API under `/api`, serving the built React SPA
-  statically. **DB:** SQLite via `better-sqlite3` + `drizzle-orm`, migrations applied
+  statically. **DB:** PostgreSQL via `pg` + `drizzle-orm`, migrations applied
   programmatically at boot. **Scheduler:** `croner` for in-process cron scheduling.
   **Frontend:** React 19 + Vite + TanStack Query, ported pixel-for-pixel from
   `design/Holonet.dc.html`.
@@ -67,7 +67,7 @@ All variables are parsed by `apps/server/src/config.ts` (zod, fail-fast on inval
 | `APP_KEY` | yes | — | The single auth credential. Min 16 chars enforced. |
 | `OPENROUTER_API_KEY` | yes | — | OpenRouter bearer token. |
 | `SESSION_SECRET` | no | sha256(APP_KEY + ":holonet-session") hex | HMAC key for signed cookie. |
-| `DATABASE_PATH` | no | `./data/holonet.db` | SQLite file (dir auto-created). |
+| `DATABASE_URL` | no | `postgres://holonet:holonet@localhost:5432/holonet` | Postgres connection string. |
 | `PORT` | no | `3000` | HTTP port. |
 | `COOKIE_SECURE` | no | `false` | Set `true` behind TLS. |
 | `TRUST_PROXY` | no | `false` | Trust X-Forwarded-For for client IP (set true only behind a reverse proxy). |
@@ -103,13 +103,15 @@ CI (`.github/workflows/ci.yml`) runs `pnpm check`, `pnpm typecheck`, `pnpm test`
 
 ## Data persistence
 
-The SQLite database lives at `/data/holonet.db` inside the container, backed by the
-`holonet-data` named volume. To back it up, copy the file out while the container is stopped
-(or use SQLite's online backup while it's running):
+Data lives in the `postgres` service, backed by the `holonet-pgdata` named volume. To back it
+up, use `pg_dump` against the running container:
 
 ```bash
-docker compose stop holonet
-docker run --rm -v holonet_holonet-data:/data -v "$PWD":/backup alpine \
-  cp /data/holonet.db /backup/holonet-backup.db
-docker compose start holonet
+docker compose exec postgres pg_dump -U holonet holonet > holonet-backup.sql
+```
+
+Restore into a fresh volume with `psql`:
+
+```bash
+docker compose exec -T postgres psql -U holonet holonet < holonet-backup.sql
 ```

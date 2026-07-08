@@ -7,8 +7,6 @@ WORKDIR /app
 
 # ---- deps + build -----------------------------------------------------
 FROM base AS build
-# better-sqlite3 needs a native build toolchain
-RUN apk add --no-cache python3 make g++
 
 # Workspace manifests first so `pnpm install` is cached across source changes.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -44,13 +42,11 @@ COPY --from=build /app/apps/web/dist ./public
 
 ENV NODE_ENV=production \
     STATIC_DIR=/app/public \
-    DATABASE_PATH=/data/holonet.db \
     PORT=3000
 
-RUN mkdir -p /data && chown -R node:node /data /app
+RUN chown -R node:node /app
 
 USER node
-VOLUME /data
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

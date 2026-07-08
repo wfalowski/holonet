@@ -12,8 +12,9 @@ the UI — a sci-fi terminal aesthetic, amber-on-dark, fonts Chakra Petch + JetB
 - **Runtime:** Node.js 22, ESM only (`"type": "module"`), TypeScript strict.
 - **Server:** Hono (`hono`, `@hono/node-server`), REST JSON API under `/api`, serves the built
   React SPA statically.
-- **DB:** SQLite via `better-sqlite3` + `drizzle-orm` (+ `drizzle-kit` migrations, applied
-  programmatically at boot via `migrate()`).
+- **DB:** PostgreSQL via `pg` (node-postgres) + `drizzle-orm` (+ `drizzle-kit` migrations, applied
+  programmatically at boot via `migrate()`). Tests run the same migrations against
+  `@electric-sql/pglite`, an in-memory Postgres, so no external DB is needed to run the suite.
 - **Scheduler:** `croner` (cron parsing, next-run computation, in-process scheduling).
 - **LLM:** OpenRouter chat-completions API (plain `fetch`, no SDK).
 - **Frontend:** React 19 + Vite + TypeScript, `@tanstack/react-query`. No router — the design is
@@ -88,7 +89,7 @@ Root scripts (used by CI and agents — keep these exact names):
 | `APP_KEY` | yes | — | The single auth credential. Min 16 chars enforced. |
 | `OPENROUTER_API_KEY` | yes | — | OpenRouter bearer token. |
 | `SESSION_SECRET` | no | sha256(APP_KEY + ":holonet-session") hex | HMAC key for signed cookie. |
-| `DATABASE_PATH` | no | `./data/holonet.db` | SQLite file (dir auto-created). |
+| `DATABASE_URL` | no | `postgres://holonet:holonet@localhost:5432/holonet` | Postgres connection string. |
 | `PORT` | no | `3000` | HTTP port. |
 | `COOKIE_SECURE` | no | `false` | Set `true` behind TLS. |
 | `TRUST_PROXY` | no | `false` | Trust X-Forwarded-For for client IP (set true only behind a reverse proxy). |
@@ -115,36 +116,40 @@ Single-user, `APP_KEY`-only:
 No `better-auth` dependency — for one static key it adds surface without value; a signed cookie
 via Hono's built-in helper is the consistent minimal implementation. (Documented in README.)
 
-## Database schema (drizzle, SQLite)
+## Database schema (drizzle, PostgreSQL)
 
 ```ts
 // tasks
-id          text pk               // crypto.randomUUID()
+id          uuid pk default gen_random_uuid()
 name        text notnull
 cron        text notnull          // 5-field cron expression
 prompt      text notnull
 model       text notnull          // OpenRouter model id, e.g. "anthropic/claude-sonnet-4.5"
-webSearch   integer(boolean) notnull default true
-enabled     integer(boolean) notnull default true
+webSearch   boolean notnull default true
+enabled     boolean notnull default true
 webhookUrl  text notnull          // Discord webhook URL
 channel     text notnull          // display-only channel name (no '#')
-dedupe      integer(boolean) notnull default true
+dedupe      boolean notnull default true
 format      text notnull default 'digest'   // 'digest' | 'bullets' | 'headlines'
-sources     text notnull default '[]'       // JSON array of strings
-createdAt   integer(timestamp_ms) notnull
-updatedAt   integer(timestamp_ms) notnull
+sources     jsonb notnull default '[]'      // string[]
+createdAt   timestamp with time zone notnull
+updatedAt   timestamp with time zone notnull
 
 // runs (activity log; survives task deletion via denormalized name)
-id          text pk
-taskId      text nullable references tasks.id on delete set null
+id          uuid pk default gen_random_uuid()
+taskId      uuid nullable references tasks.id on delete set null
 taskName    text notnull
 channel     text notnull
 status      text notnull          // 'ok' | 'fail'
 message     text notnull          // e.g. "digest compiled · 5 items relayed" / error summary
 durationMs  integer notnull
-createdAt   integer(timestamp_ms) notnull
+createdAt   timestamp with time zone notnull
 -- index runs(createdAt desc), index runs(taskId)
 ```
+
+Server code maps DB rows to the API contract at the boundary (`api/serialize.ts`): timestamps
+are exposed as epoch ms, `sources` as `string[]`, exactly per the `@holonet/shared` zod schemas
+— the HTTP API and frontend are unaffected by the underlying DB engine.
 
 ## API contract (all JSON; zod schemas in `@holonet/shared`)
 
@@ -233,13 +238,17 @@ export const MODELS = [
 ## Docker & CI
 
 - **Dockerfile** multi-stage: `node:22-alpine` + corepack pnpm; stage 1 install+build all
-  workspaces; stage 2 `pnpm deploy --filter @holonet/server --prod` (native better-sqlite3 needs
-  build deps in the build stage only); runtime copies server deploy dir, `apps/server/drizzle/`
-  migrations and `apps/web/dist` (served path resolved via env `STATIC_DIR`, default
-  `../web-dist` relative or absolute `/app/public`). Non-root user, `VOLUME /data`,
-  `DATABASE_PATH=/data/holonet.db`, `EXPOSE 3000`, healthcheck curl `/healthz`.
-- **docker-compose.yml**: single service, image from GHCR (`ghcr.io/<owner>/holonet:latest`) with
-  `build:` fallback, env from `.env`, volume `holonet-data:/data`, restart unless-stopped.
+  workspaces; stage 2 `pnpm deploy --filter @holonet/server --prod`; runtime copies server
+  deploy dir, `apps/server/drizzle/` migrations and `apps/web/dist` (served path resolved via
+  env `STATIC_DIR`, default `../web-dist` relative or absolute `/app/public`). Non-root user,
+  `EXPOSE 3000`, healthcheck curl `/healthz`. The DB no longer lives in the app container — no
+  volume, no `DATABASE_PATH`.
+- **docker-compose.yml**: app service, image from GHCR (`ghcr.io/<owner>/holonet:latest`) with
+  `build:` fallback, env from `.env` plus `DATABASE_URL` pointing at the compose-internal
+  `postgres` service, `depends_on: postgres: condition: service_healthy`; a `postgres:17-alpine`
+  service with `POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB=holonet`, volume
+  `holonet-pgdata:/var/lib/postgresql/data`, `pg_isready` healthcheck. Both services
+  `restart: unless-stopped`.
 - **CI (`ci.yml`)**: on PR + push main — pnpm install (frozen lockfile), `check`, `typecheck`,
   `test`, `build`.
 - **Docker (`docker.yml`)**: on push main + tags `v*` — buildx, login GHCR with `GITHUB_TOKEN`,
@@ -251,4 +260,5 @@ export const MODELS = [
 - No `any`, no enums (string-literal unions / `as const`), validate at IO boundaries only.
 - Server logs: pino, one line per event, never log APP_KEY/OPENROUTER key/webhook tokens.
 - Tests: `node:test` for shared cron describe/parse, auth session helpers, executor prompt
-  building + Discord chunking. No test DB harness needed beyond in-memory SQLite.
+  building + Discord chunking. The tasks API integration test runs the committed migrations
+  against an in-memory `@electric-sql/pglite` instance — no external Postgres needed.

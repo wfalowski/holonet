@@ -17,19 +17,20 @@ function notFound() {
   return { error: { code: "NOT_FOUND" as const, message: "Task not found" } };
 }
 
-function latestRunFor(db: Db, taskId: string): LastRun {
-  const row = db
+async function latestRunFor(db: Db, taskId: string): Promise<LastRun> {
+  const rows = await db
     .select({ status: runs.status, at: runs.createdAt })
     .from(runs)
     .where(eq(runs.taskId, taskId))
     .orderBy(desc(runs.createdAt))
-    .limit(1)
-    .get();
+    .limit(1);
+  const row = rows[0];
   return row ? { at: row.at.getTime(), status: row.status as RunStatus } : null;
 }
 
-function getTask(db: Db, id: string): TaskRow | undefined {
-  return db.select().from(tasks).where(eq(tasks.id, id)).get();
+async function getTask(db: Db, id: string): Promise<TaskRow | undefined> {
+  const rows = await db.select().from(tasks).where(eq(tasks.id, id));
+  return rows[0];
 }
 
 export function createTasksRoutes(
@@ -39,22 +40,27 @@ export function createTasksRoutes(
 ): Hono {
   const app = new Hono();
 
-  app.get("/", (c) => {
-    const rows = db.select().from(tasks).all();
+  app.get("/", async (c) => {
+    const rows = await db.select().from(tasks);
 
-    // Latest run per task in a single grouped query (no N+1).
-    const latest = db.all(
-      sql`SELECT task_id AS taskId, status, created_at AS at FROM (
+    // Latest run per task in a single grouped query (no N+1). Aliases are
+    // quoted so Postgres preserves the camelCase keys used below. The generic
+    // Db type erases the concrete driver's result shape, so the raw result is
+    // cast to the row shape this query is known to produce.
+    const result =
+      (await db.execute(sql`SELECT task_id AS "taskId", status, created_at AS "at" FROM (
         SELECT task_id, status, created_at,
           ROW_NUMBER() OVER (PARTITION BY task_id ORDER BY created_at DESC, id DESC) AS rn
         FROM runs WHERE task_id IS NOT NULL
-      ) WHERE rn = 1`,
-    ) as Array<{ taskId: string; status: string; at: number }>;
+      ) latest WHERE rn = 1`)) as {
+        rows: Array<{ taskId: string; status: string; at: Date }>;
+      };
+    const latest = result.rows;
 
     const lastRunByTask = new Map<string, LastRun>();
     for (const r of latest) {
       lastRunByTask.set(r.taskId, {
-        at: r.at,
+        at: r.at.getTime(),
         status: r.status as RunStatus,
       });
     }
@@ -74,24 +80,24 @@ export function createTasksRoutes(
       );
     }
 
+    const id = randomUUID();
     const now = new Date();
     const row: NewTaskRow = {
-      id: randomUUID(),
+      id,
       ...parsed.data,
-      sources: JSON.stringify(parsed.data.sources),
       createdAt: now,
       updatedAt: now,
     };
-    db.insert(tasks).values(row).run();
+    await db.insert(tasks).values(row);
 
-    const created = getTask(db, row.id) as TaskRow;
+    const created = (await getTask(db, id)) as TaskRow;
     scheduler.sync(created);
     return c.json(rowToTask(created, null), 201);
   });
 
   app.put("/:id", async (c) => {
     const id = c.req.param("id");
-    const existing = getTask(db, id);
+    const existing = await getTask(db, id);
     if (!existing) return c.json(notFound(), 404);
 
     const body = await c.req.json().catch(() => null);
@@ -103,48 +109,47 @@ export function createTasksRoutes(
       );
     }
 
-    db.update(tasks)
+    await db
+      .update(tasks)
       .set({
         ...parsed.data,
-        sources: JSON.stringify(parsed.data.sources),
         updatedAt: new Date(),
       })
-      .where(eq(tasks.id, id))
-      .run();
+      .where(eq(tasks.id, id));
 
-    const updated = getTask(db, id) as TaskRow;
+    const updated = (await getTask(db, id)) as TaskRow;
     scheduler.sync(updated);
-    return c.json(rowToTask(updated, latestRunFor(db, id)));
+    return c.json(rowToTask(updated, await latestRunFor(db, id)));
   });
 
-  app.delete("/:id", (c) => {
+  app.delete("/:id", async (c) => {
     const id = c.req.param("id");
-    const existing = getTask(db, id);
+    const existing = await getTask(db, id);
     if (!existing) return c.json(notFound(), 404);
 
-    db.delete(tasks).where(eq(tasks.id, id)).run();
+    await db.delete(tasks).where(eq(tasks.id, id));
     scheduler.remove(id);
     return c.body(null, 204);
   });
 
-  app.post("/:id/toggle", (c) => {
+  app.post("/:id/toggle", async (c) => {
     const id = c.req.param("id");
-    const existing = getTask(db, id);
+    const existing = await getTask(db, id);
     if (!existing) return c.json(notFound(), 404);
 
-    db.update(tasks)
+    await db
+      .update(tasks)
       .set({ enabled: !existing.enabled, updatedAt: new Date() })
-      .where(eq(tasks.id, id))
-      .run();
+      .where(eq(tasks.id, id));
 
-    const updated = getTask(db, id) as TaskRow;
+    const updated = (await getTask(db, id)) as TaskRow;
     scheduler.sync(updated);
-    return c.json(rowToTask(updated, latestRunFor(db, id)));
+    return c.json(rowToTask(updated, await latestRunFor(db, id)));
   });
 
   app.post("/:id/run", async (c) => {
     const id = c.req.param("id");
-    const existing = getTask(db, id);
+    const existing = await getTask(db, id);
     if (!existing) return c.json(notFound(), 404);
 
     try {

@@ -51,7 +51,7 @@ export function buildSystemPrompt(task: TaskRow): string {
     );
   }
 
-  const sources = JSON.parse(task.sources) as string[];
+  const sources = task.sources;
   if (sources.length > 0) {
     lines.push(
       `Prioritize these sources when relevant: ${sources.join(", ")}.`,
@@ -121,7 +121,7 @@ export function createExecutor({ db, config, logger }: ExecutorDeps): Executor {
           durationMs: Date.now() - started,
           createdAt: new Date(),
         };
-        db.insert(runs).values(run).run();
+        await db.insert(runs).values(run);
         return run;
       } finally {
         inFlight.delete(task.id);

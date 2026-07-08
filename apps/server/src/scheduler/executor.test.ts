@@ -16,7 +16,7 @@ function makeTask(overrides: Partial<TaskRow> = {}): TaskRow {
     channel: "general",
     dedupe: true,
     format: "digest",
-    sources: JSON.stringify(["Reuters", "AP"]),
+    sources: ["Reuters", "AP"],
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -33,7 +33,7 @@ test("buildSystemPrompt: encodes format, dedupe, and priority sources", () => {
 
 test("buildSystemPrompt: bullets format omits dedupe when disabled", () => {
   const prompt = buildSystemPrompt(
-    makeTask({ format: "bullets", dedupe: false, sources: JSON.stringify([]) }),
+    makeTask({ format: "bullets", dedupe: false, sources: [] }),
   );
   assert.match(prompt, /bullet/i);
   assert.ok(!/Deduplicate/.test(prompt));

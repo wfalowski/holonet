@@ -1,10 +1,12 @@
 import { defineConfig } from "drizzle-kit";
 
 export default defineConfig({
-  dialect: "sqlite",
+  dialect: "postgresql",
   schema: "./src/db/schema.ts",
   out: "./drizzle",
   dbCredentials: {
-    url: process.env.DATABASE_PATH ?? "./data/holonet.db",
+    url:
+      process.env.DATABASE_URL ??
+      "postgres://holonet:holonet@localhost:5432/holonet",
   },
 });
