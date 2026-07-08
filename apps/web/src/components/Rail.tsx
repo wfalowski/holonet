@@ -21,6 +21,7 @@ export function Rail({ view, onNavigate, tasksCount, runsCount }: RailProps) {
     { id: "tasks", code: "02", label: "CRON TASKS", count: String(tasksCount) },
     { id: "integrations", code: "03", label: "INTEGRATIONS", count: "1" },
     { id: "activity", code: "04", label: "ACTIVITY", count: String(runsCount) },
+    { id: "settings", code: "05", label: "SETTINGS", count: "" },
   ];
 
   return (

@@ -1,15 +1,24 @@
-import { countdown, type Task, type TaskInput } from "@holonet/shared";
+import {
+  countdown,
+  type ModelInput,
+  type ModelUpdate,
+  type Task,
+  type TaskInput,
+} from "@holonet/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   ApiRequestError,
+  createModel,
   createTask,
+  deleteModel,
   deleteTask,
   modelsQueryOptions,
   runsQueryOptions,
   runTaskNow,
   tasksQueryOptions,
   toggleTask,
+  updateModel,
   updateTask,
 } from "../api/client.js";
 import { errorMessage } from "../lib/errors.js";
@@ -20,6 +29,7 @@ import { useToasts } from "../lib/useToasts.js";
 import { ActivityView } from "../views/ActivityView.js";
 import { IntegrationsView } from "../views/IntegrationsView.js";
 import { OverviewView } from "../views/OverviewView.js";
+import { SettingsView } from "../views/SettingsView.js";
 import { TasksView } from "../views/TasksView.js";
 import { Rail } from "./Rail.js";
 import { StatusBar } from "./StatusBar.js";
@@ -99,6 +109,29 @@ export function Console() {
     onSettled: () => setRunningId(null),
   });
 
+  function invalidateModels() {
+    queryClient.invalidateQueries({ queryKey: ["models"] });
+  }
+
+  const createModelMutation = useMutation({
+    mutationFn: (input: ModelInput) => createModel(input),
+    onSuccess: invalidateModels,
+    onError: (error) => pushToast(errorMessage(error)),
+  });
+
+  const updateModelMutation = useMutation({
+    mutationFn: ({ id, input }: { id: string; input: ModelUpdate }) =>
+      updateModel(id, input),
+    onSuccess: invalidateModels,
+    onError: (error) => pushToast(errorMessage(error)),
+  });
+
+  const deleteModelMutation = useMutation({
+    mutationFn: (id: string) => deleteModel(id),
+    onSuccess: invalidateModels,
+    onError: (error) => pushToast(errorMessage(error)),
+  });
+
   const activeCount = tasks.filter((t) => t.enabled).length;
   const upcomingRaw = tasks
     .filter((t) => t.enabled && t.nextRunAt != null)
@@ -174,6 +207,21 @@ export function Console() {
           )}
           {view === "integrations" && <IntegrationsView tasks={tasks} />}
           {view === "activity" && <ActivityView runs={runs} />}
+          {view === "settings" && (
+            <SettingsView
+              models={models}
+              onCreate={(input) => createModelMutation.mutate(input)}
+              onUpdate={(id, input) =>
+                updateModelMutation.mutate({ id, input })
+              }
+              onDelete={(id) => deleteModelMutation.mutate(id)}
+              isSaving={
+                createModelMutation.isPending ||
+                updateModelMutation.isPending ||
+                deleteModelMutation.isPending
+              }
+            />
+          )}
         </main>
       </div>
 
