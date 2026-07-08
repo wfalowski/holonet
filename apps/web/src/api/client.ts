@@ -1,6 +1,9 @@
 import type {
   ApiError,
   LoginInput,
+  Model,
+  ModelInput,
+  ModelUpdate,
   Run,
   Task,
   TaskInput,
@@ -49,12 +52,22 @@ export const api = {
       method: "PUT",
       body: data === undefined ? undefined : JSON.stringify(data),
     }),
+  patch: <T>(path: string, data?: unknown) =>
+    json<T>(path, {
+      method: "PATCH",
+      body: data === undefined ? undefined : JSON.stringify(data),
+    }),
   delete: <T>(path: string) => json<T>(path, { method: "DELETE" }),
 };
 
 export const tasksQueryOptions = queryOptions({
   queryKey: ["tasks"] as const,
   queryFn: () => api.get<Task[]>("/api/tasks"),
+});
+
+export const modelsQueryOptions = queryOptions({
+  queryKey: ["models"] as const,
+  queryFn: () => api.get<Model[]>("/api/models"),
 });
 
 export function runsQueryOptions(limit = 80) {
@@ -100,4 +113,16 @@ export function toggleTask(id: string) {
 
 export function runTaskNow(id: string) {
   return api.post<Run>(`/api/tasks/${id}/run`);
+}
+
+export function createModel(input: ModelInput) {
+  return api.post<Model>("/api/models", input);
+}
+
+export function updateModel(id: string, input: ModelUpdate) {
+  return api.patch<Model>(`/api/models/${id}`, input);
+}
+
+export function deleteModel(id: string) {
+  return api.delete<void>(`/api/models/${id}`);
 }

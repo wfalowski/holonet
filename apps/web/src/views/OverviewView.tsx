@@ -1,4 +1,10 @@
-import { countdown, describeCron, type Run, type Task } from "@holonet/shared";
+import {
+  countdown,
+  describeCron,
+  type Model,
+  type Run,
+  type Task,
+} from "@holonet/shared";
 import { formatClock } from "../lib/format.js";
 import { modelLabel } from "../lib/modelLabel.js";
 import {
@@ -20,10 +26,11 @@ const DAY_MS = 86_400_000;
 interface OverviewViewProps {
   tasks: Task[];
   runs: Run[];
+  models: Model[];
   now: number;
 }
 
-export function OverviewView({ tasks, runs, now }: OverviewViewProps) {
+export function OverviewView({ tasks, runs, models, now }: OverviewViewProps) {
   const activeJobs = tasks.filter((t) => t.enabled);
   const runsToday = runs.filter((r) => r.createdAt >= now - DAY_MS).length;
   const upcomingRaw = activeJobs
@@ -65,7 +72,7 @@ export function OverviewView({ tasks, runs, now }: OverviewViewProps) {
   const upcoming = upcomingRaw.slice(0, 5).map((j) => ({
     id: j.id,
     name: j.name,
-    meta: `${modelLabel(j.model)} · #${j.channel}`,
+    meta: `${modelLabel(j.model, models)} · #${j.channel}`,
     cd: countdown(j.nextRunAt, now),
     tag: describeCron(j.cron).tag,
   }));

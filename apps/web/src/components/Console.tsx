@@ -5,6 +5,7 @@ import {
   ApiRequestError,
   createTask,
   deleteTask,
+  modelsQueryOptions,
   runsQueryOptions,
   runTaskNow,
   tasksQueryOptions,
@@ -39,8 +40,10 @@ export function Console() {
 
   const tasksQuery = useQuery(tasksQueryOptions);
   const runsQuery = useQuery(runsQueryOptions());
+  const modelsQuery = useQuery(modelsQueryOptions);
   const tasks = tasksQuery.data ?? [];
   const runs = runsQuery.data ?? [];
+  const models = modelsQuery.data ?? [];
 
   function invalidateAll() {
     queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -154,11 +157,12 @@ export function Console() {
 
         <main style={{ overflow: "auto", padding: "26px 28px 40px" }}>
           {view === "overview" && (
-            <OverviewView tasks={tasks} runs={runs} now={now} />
+            <OverviewView tasks={tasks} runs={runs} models={models} now={now} />
           )}
           {view === "tasks" && (
             <TasksView
               tasks={tasks}
+              models={models}
               now={now}
               runningId={runningId}
               conflictId={conflictId}
@@ -178,6 +182,7 @@ export function Console() {
           key={drawer.mode === "edit" ? drawer.task.id : "new"}
           mode={drawer.mode}
           task={drawer.mode === "edit" ? drawer.task : null}
+          models={models}
           onClose={() => setDrawer(null)}
           onCreate={(input) => createMutation.mutate(input)}
           onUpdate={(id, input) => updateMutation.mutate({ id, input })}

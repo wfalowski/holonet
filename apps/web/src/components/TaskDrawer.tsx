@@ -1,6 +1,6 @@
 import {
   describeCron,
-  MODELS,
+  type Model,
   type Task,
   type TaskFormat,
   type TaskInput,
@@ -72,12 +72,12 @@ interface FormState {
   sourceInput: string;
 }
 
-function blankForm(): FormState {
+function blankForm(models: Model[]): FormState {
   return {
     name: "",
     cron: "0 9 * * *",
     prompt: "",
-    model: MODELS[0].id,
+    model: models[0]?.modelId ?? "",
     webSearch: true,
     enabled: true,
     webhookUrl: "",
@@ -109,6 +109,7 @@ function formFromTask(task: Task): FormState {
 interface TaskDrawerProps {
   mode: "new" | "edit";
   task: Task | null;
+  models: Model[];
   onClose: () => void;
   onCreate: (input: TaskInput) => void;
   onUpdate: (id: string, input: TaskInput) => void;
@@ -120,6 +121,7 @@ interface TaskDrawerProps {
 export function TaskDrawer({
   mode,
   task,
+  models,
   onClose,
   onCreate,
   onUpdate,
@@ -128,7 +130,7 @@ export function TaskDrawer({
   isDeleting,
 }: TaskDrawerProps) {
   const [form, setForm] = useState<FormState>(() =>
-    mode === "edit" && task ? formFromTask(task) : blankForm(),
+    mode === "edit" && task ? formFromTask(task) : blankForm(models),
   );
   const [showErrors, setShowErrors] = useState(false);
   const [confirmPurge, setConfirmPurge] = useState(false);
@@ -166,6 +168,7 @@ export function TaskDrawer({
       form.name.trim() &&
       cdesc.ok &&
       form.prompt.trim().length > 3 &&
+      form.model &&
       DISCORD_WEBHOOK_RE.test(form.webhookUrl);
     if (!valid) {
       setShowErrors(true);
@@ -521,57 +524,71 @@ export function TaskDrawer({
           >
             INFERENCE MODEL
           </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "7px",
-            }}
-          >
-            {MODELS.map((m) => {
-              const on = form.model === m.id;
-              return (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => updForm("model", m.id)}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "4px",
-                    alignItems: "flex-start",
-                    padding: "10px 12px",
-                    cursor: "pointer",
-                    border: `1px solid ${on ? "rgba(255,179,71,.55)" : "rgba(140,160,190,.18)"}`,
-                    background: on
-                      ? "rgba(255,179,71,.1)"
-                      : "rgba(140,160,190,.04)",
-                    color: on ? HI : "#9aa6ba",
-                  }}
-                >
-                  <span
+          {models.length === 0 ? (
+            <div
+              style={{
+                fontSize: "10px",
+                letterSpacing: ".08em",
+                color: DIM,
+                border: "1px dashed rgba(140,160,190,.25)",
+                padding: "12px 13px",
+              }}
+            >
+              NO MODELS IN CATALOG — ADD ONE IN SETTINGS
+            </div>
+          ) : (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "7px",
+              }}
+            >
+              {models.map((m) => {
+                const on = form.model === m.modelId;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => updForm("model", m.modelId)}
                     style={{
-                      fontSize: "8px",
-                      letterSpacing: ".2em",
-                      color: on ? AMBER : DIM,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "4px",
+                      alignItems: "flex-start",
+                      padding: "10px 12px",
+                      cursor: "pointer",
+                      border: `1px solid ${on ? "rgba(255,179,71,.55)" : "rgba(140,160,190,.18)"}`,
+                      background: on
+                        ? "rgba(255,179,71,.1)"
+                        : "rgba(140,160,190,.04)",
+                      color: on ? HI : "#9aa6ba",
                     }}
                   >
-                    {m.family}
-                  </span>
-                  <span
-                    style={{
-                      fontFamily: CHAKRA,
-                      fontWeight: 600,
-                      fontSize: "12px",
-                      letterSpacing: ".08em",
-                    }}
-                  >
-                    {m.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+                    <span
+                      style={{
+                        fontSize: "8px",
+                        letterSpacing: ".2em",
+                        color: on ? AMBER : DIM,
+                      }}
+                    >
+                      {m.family}
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: CHAKRA,
+                        fontWeight: 600,
+                        fontSize: "12px",
+                        letterSpacing: ".08em",
+                      }}
+                    >
+                      {m.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           <div
             style={{
@@ -1007,7 +1024,7 @@ export function TaskDrawer({
           <button
             type="button"
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || !form.model}
             style={{
               background: AMBER,
               color: "#0a0c10",
@@ -1017,8 +1034,8 @@ export function TaskDrawer({
               fontWeight: 700,
               fontSize: "11px",
               letterSpacing: ".16em",
-              cursor: saving ? "default" : "pointer",
-              opacity: saving ? 0.6 : 1,
+              cursor: saving || !form.model ? "default" : "pointer",
+              opacity: saving || !form.model ? 0.6 : 1,
               boxShadow: "0 0 18px rgba(255,179,71,.4)",
             }}
           >

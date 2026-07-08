@@ -1,4 +1,10 @@
-import { countdown, describeCron, relTime, type Task } from "@holonet/shared";
+import {
+  countdown,
+  describeCron,
+  type Model,
+  relTime,
+  type Task,
+} from "@holonet/shared";
 import { useState } from "react";
 import { modelLabel } from "../lib/modelLabel.js";
 import {
@@ -25,6 +31,7 @@ const ROW_GRID = "12px minmax(120px,1.3fr) 134px 92px 108px 104px";
 
 interface TasksViewProps {
   tasks: Task[];
+  models: Model[];
   now: number;
   runningId: string | null;
   conflictId: string | null;
@@ -36,6 +43,7 @@ interface TasksViewProps {
 
 export function TasksView({
   tasks,
+  models,
   now,
   runningId,
   conflictId,
@@ -244,7 +252,7 @@ export function TasksView({
                       padding: "1px 5px",
                     }}
                   >
-                    {modelLabel(j.model)}
+                    {modelLabel(j.model, models)}
                   </span>
                   {j.webSearch && (
                     <span
