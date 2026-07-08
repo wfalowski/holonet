@@ -1,11 +1,12 @@
 import {
+  type Model,
   nextRun,
   type Run,
   type RunStatus,
   type Task,
   type TaskFormat,
 } from "@holonet/shared";
-import type { RunRow, TaskRow } from "../db/schema.js";
+import type { ModelRow, RunRow, TaskRow } from "../db/schema.js";
 
 export type LastRun = { at: number; status: RunStatus } | null;
 
@@ -42,5 +43,16 @@ export function rowToRun(row: RunRow): Run {
     message: row.message,
     durationMs: row.durationMs,
     createdAt: row.createdAt.getTime(),
+  };
+}
+
+export function rowToModel(row: ModelRow, inUse: number): Model {
+  return {
+    id: row.id,
+    modelId: row.modelId,
+    label: row.label,
+    family: row.family,
+    createdAt: row.createdAt.getTime(),
+    inUse,
   };
 }

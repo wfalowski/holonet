@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
+import { createModelsRoutes } from "./api/models.js";
 import { createRunsRoutes } from "./api/runs.js";
 import { createTasksRoutes } from "./api/tasks.js";
 import { authMiddleware } from "./auth/middleware.js";
@@ -68,6 +69,7 @@ export function createApp({
   const api = new Hono();
   api.use("*", authMiddleware(config));
   api.route("/tasks", createTasksRoutes(db, scheduler, executor));
+  api.route("/models", createModelsRoutes(db));
   api.route("/runs", createRunsRoutes(db));
   app.route("/api", api);
 

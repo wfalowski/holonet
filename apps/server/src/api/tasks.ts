@@ -4,7 +4,7 @@ import { desc, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Db } from "../db/index.js";
 import type { NewTaskRow, TaskRow } from "../db/schema.js";
-import { runs, tasks } from "../db/schema.js";
+import { models, runs, tasks } from "../db/schema.js";
 import { ConflictError, type Executor } from "../scheduler/executor.js";
 import type { Scheduler } from "../scheduler/scheduler.js";
 import { type LastRun, rowToRun, rowToTask } from "./serialize.js";
@@ -31,6 +31,14 @@ async function latestRunFor(db: Db, taskId: string): Promise<LastRun> {
 async function getTask(db: Db, id: string): Promise<TaskRow | undefined> {
   const rows = await db.select().from(tasks).where(eq(tasks.id, id));
   return rows[0];
+}
+
+async function modelInCatalog(db: Db, modelId: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: models.id })
+    .from(models)
+    .where(eq(models.modelId, modelId));
+  return rows.length > 0;
 }
 
 export function createTasksRoutes(
@@ -80,6 +88,13 @@ export function createTasksRoutes(
       );
     }
 
+    if (!(await modelInCatalog(db, parsed.data.model))) {
+      return c.json(
+        validationError("Unknown model — add it in Settings first"),
+        400,
+      );
+    }
+
     const id = randomUUID();
     const now = new Date();
     const row: NewTaskRow = {
@@ -105,6 +120,13 @@ export function createTasksRoutes(
     if (!parsed.success) {
       return c.json(
         validationError(parsed.error.issues[0]?.message ?? "Invalid task"),
+        400,
+      );
+    }
+
+    if (!(await modelInCatalog(db, parsed.data.model))) {
+      return c.json(
+        validationError("Unknown model — add it in Settings first"),
         400,
       );
     }

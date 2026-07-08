@@ -1,31 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { fileURLToPath } from "node:url";
-import { PGlite } from "@electric-sql/pglite";
-import { drizzle } from "drizzle-orm/pglite";
-import { migrate } from "drizzle-orm/pglite/migrator";
-import { createApp } from "../app.js";
-import { loadConfig } from "../config.js";
-import * as schema from "../db/schema.js";
-import { logger } from "../logger.js";
-import { createExecutor } from "../scheduler/executor.js";
-import { createScheduler } from "../scheduler/scheduler.js";
-
-const MIGRATIONS = fileURLToPath(new URL("../../drizzle", import.meta.url));
-
-async function buildApp() {
-  const client = new PGlite();
-  const db = drizzle(client, { schema });
-  await migrate(db, { migrationsFolder: MIGRATIONS });
-  const config = loadConfig({
-    APP_KEY: "test-app-key-123456",
-    OPENROUTER_API_KEY: "x",
-  });
-  const executor = createExecutor({ db, config, logger });
-  const scheduler = createScheduler({ db, executor, logger });
-  const app = createApp({ db, config, scheduler, executor });
-  return { app, scheduler };
-}
+import { buildApp, loginHeaders } from "./test-helpers.js";
 
 const validTask = {
   name: "Test Task",
@@ -49,18 +24,7 @@ test("tasks API: create -> list -> toggle -> delete, guarded by auth", async () 
   assert.equal(noAuth.status, 401);
 
   // Log in and capture the session cookie (x-forwarded-for avoids conninfo).
-  const login = await app.request("/api/auth/login", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-forwarded-for": "1.2.3.4",
-    },
-    body: JSON.stringify({ key: "test-app-key-123456" }),
-  });
-  assert.equal(login.status, 204);
-  const setCookie = login.headers.get("set-cookie");
-  assert.ok(setCookie);
-  const auth = { Cookie: (setCookie as string).split(";")[0] as string };
+  const auth = await loginHeaders(app);
 
   // Create.
   const createRes = await app.request("/api/tasks", {
