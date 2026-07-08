@@ -46,7 +46,19 @@ export const runs = pgTable(
   ],
 );
 
+export const models = pgTable("models", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  modelId: text("model_id").notNull().unique(),
+  label: text("label").notNull(),
+  family: text("family").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export type TaskRow = typeof tasks.$inferSelect;
 export type NewTaskRow = typeof tasks.$inferInsert;
 export type RunRow = typeof runs.$inferSelect;
 export type NewRunRow = typeof runs.$inferInsert;
+export type ModelRow = typeof models.$inferSelect;
+export type NewModelRow = typeof models.$inferInsert;
