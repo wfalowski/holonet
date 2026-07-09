@@ -121,11 +121,12 @@ export function createExperimentsRoutes(
         400,
       );
     }
+    const modelIds = [...new Set(parsed.data.modelIds)];
     const catalog = await db
       .select({ modelId: models.modelId })
       .from(models)
-      .where(inArray(models.modelId, parsed.data.modelIds));
-    if (catalog.length !== new Set(parsed.data.modelIds).size) {
+      .where(inArray(models.modelId, modelIds));
+    if (catalog.length !== modelIds.length) {
       return c.json(validationError("Some models are not in the catalog"), 400);
     }
 
@@ -143,7 +144,7 @@ export function createExperimentsRoutes(
       const created = inserted[0] as ExperimentRow;
       await tx.insert(experimentResults).values(
         versions.flatMap((version) =>
-          parsed.data.modelIds.map((modelId) => ({
+          modelIds.map((modelId) => ({
             experimentId: created.id,
             versionId: version.id,
             versionNumber: version.version,
@@ -156,7 +157,7 @@ export function createExperimentsRoutes(
 
     runner.start(experiment.id);
 
-    const total = versions.length * parsed.data.modelIds.length;
+    const total = versions.length * modelIds.length;
     return c.json(
       {
         ...rowToExperiment(experiment, { ok: 0, fail: 0, total }),

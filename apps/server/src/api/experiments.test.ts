@@ -63,7 +63,7 @@ test("experiment matrix runs to done with per-cell results and winner marking", 
     body: JSON.stringify({
       promptId: prompt.id,
       versionIds,
-      modelIds: ["good/model", "bad/model"],
+      modelIds: ["good/model", "bad/model", "good/model"],
     }),
   });
   assert.equal(created.status, 201);

@@ -3,6 +3,7 @@ import type {
   Experiment,
   ExperimentDetail,
   ExperimentInput,
+  ExperimentResult,
   Folder,
   FolderInput,
   LoginInput,
@@ -221,9 +222,10 @@ export function setResultWinner(
   resultId: string,
   winner: boolean,
 ) {
-  return api.patch(`/api/experiments/${experimentId}/results/${resultId}`, {
-    winner,
-  });
+  return api.patch<ExperimentResult>(
+    `/api/experiments/${experimentId}/results/${resultId}`,
+    { winner },
+  );
 }
 
 export function createSchema(input: SchemaDocInput) {
