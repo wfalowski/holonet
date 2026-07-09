@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { afterEach, mock, test } from "node:test";
 import type { Prompt, PromptDetail, PromptVersion } from "@holonet/shared";
 import { eq } from "drizzle-orm";
-import { promptVersions } from "../db/schema.js";
+import { models, promptVersions } from "../db/schema.js";
 import { buildApp, loginHeaders } from "./test-helpers.js";
 
 async function createPrompt(
@@ -18,6 +18,74 @@ async function createPrompt(
   assert.equal(res.status, 201);
   return (await res.json()) as Prompt;
 }
+
+afterEach(() => mock.restoreAll());
+
+test("optimize returns improved+rationale and saves nothing", async () => {
+  const { app, db } = await buildApp();
+  const headers = await loginHeaders(app);
+  await db.insert(models).values([
+    { modelId: "test/target-model", label: "TGT", family: "TEST" },
+    { modelId: "test/optimizer-model", label: "OPT", family: "TEST" },
+  ]);
+  const prompt = await createPrompt(app, headers, {
+    name: "P",
+    content: "old",
+  });
+  const detail = (await (
+    await app.request(`/api/prompts/${prompt.id}`, { headers })
+  ).json()) as PromptDetail;
+  const versionId = detail.versions[0]?.id as string;
+
+  mock.method(
+    globalThis,
+    "fetch",
+    async () =>
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content:
+                  "<improved>\nnew prompt\n</improved>\n<rationale>\nbetter\n</rationale>",
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+  );
+
+  const res = await app.request(`/api/prompts/${prompt.id}/optimize`, {
+    method: "POST",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      versionId,
+      targetModelId: "test/target-model",
+      optimizerModelId: "test/optimizer-model",
+    }),
+  });
+  assert.equal(res.status, 200);
+  const out = (await res.json()) as { improved: string; rationale: string };
+  assert.equal(out.improved, "new prompt");
+  assert.equal(out.rationale, "better");
+
+  const after = (await (
+    await app.request(`/api/prompts/${prompt.id}`, { headers })
+  ).json()) as PromptDetail;
+  assert.equal(after.versionCount, 1); // nothing saved
+
+  const badModel = await app.request(`/api/prompts/${prompt.id}/optimize`, {
+    method: "POST",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      versionId,
+      targetModelId: "not/in-catalog",
+      optimizerModelId: "test/optimizer-model",
+    }),
+  });
+  assert.equal(badModel.status, 400);
+});
 
 test("create seeds v1; saves increment; metadata patch adds no version", async () => {
   const { app } = await buildApp();

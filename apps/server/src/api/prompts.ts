@@ -1,19 +1,26 @@
 import {
+  OptimizeInputSchema,
   PromptInputSchema,
   PromptMetaUpdateSchema,
   PromptVersionInputSchema,
 } from "@holonet/shared";
-import { desc, eq, sql } from "drizzle-orm";
+import { desc, eq, inArray, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Config } from "../config.js";
 import type { Db } from "../db/index.js";
 import type { PromptRow, PromptVersionRow } from "../db/schema.js";
 import {
+  models,
   outputSchemas,
   promptFolders,
   prompts,
   promptVersions,
 } from "../db/schema.js";
+import { chatComplete } from "../services/openrouter.js";
+import {
+  buildOptimizerMessages,
+  parseOptimizerResponse,
+} from "../services/optimizer.js";
 import { rowToPrompt, rowToPromptVersion } from "./promptSerialize.js";
 
 function validationError(message: string) {
@@ -71,7 +78,7 @@ async function checkRefs(
   return null;
 }
 
-export function createPromptsRoutes(db: Db, _config: Config): Hono {
+export function createPromptsRoutes(db: Db, config: Config): Hono {
   const app = new Hono();
 
   app.get("/", async (c) => {
@@ -224,6 +231,71 @@ export function createPromptsRoutes(db: Db, _config: Config): Hono {
     if (!existing) return c.json(notFound(), 404);
     await db.delete(prompts).where(eq(prompts.id, id));
     return c.body(null, 204);
+  });
+
+  app.post("/:id/optimize", async (c) => {
+    const id = c.req.param("id");
+    const existing = await getPrompt(db, id);
+    if (!existing) return c.json(notFound(), 404);
+    const body = await c.req.json().catch(() => null);
+    const parsed = OptimizeInputSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json(
+        validationError(parsed.error.issues[0]?.message ?? "Invalid request"),
+        400,
+      );
+    }
+    const versionRows = await db
+      .select()
+      .from(promptVersions)
+      .where(eq(promptVersions.id, parsed.data.versionId));
+    const version = versionRows[0];
+    if (!version || version.promptId !== id) {
+      return c.json(validationError("Version does not belong to prompt"), 400);
+    }
+    const modelRows = await db
+      .select()
+      .from(models)
+      .where(
+        inArray(models.modelId, [
+          parsed.data.targetModelId,
+          parsed.data.optimizerModelId,
+        ]),
+      );
+    const target = modelRows.find(
+      (m) => m.modelId === parsed.data.targetModelId,
+    );
+    const optimizer = modelRows.find(
+      (m) => m.modelId === parsed.data.optimizerModelId,
+    );
+    if (!target) return c.json(validationError("Unknown target model"), 400);
+    if (!optimizer) {
+      return c.json(validationError("Unknown optimizer model"), 400);
+    }
+
+    try {
+      const raw = await chatComplete({
+        apiKey: config.openrouterApiKey,
+        model: optimizer.modelId,
+        messages: buildOptimizerMessages(
+          version.content,
+          target.modelId,
+          target.family,
+        ),
+        webSearch: false,
+      });
+      return c.json(parseOptimizerResponse(raw));
+    } catch {
+      return c.json(
+        {
+          error: {
+            code: "INTERNAL" as const,
+            message: "Optimizer call failed",
+          },
+        },
+        502,
+      );
+    }
   });
 
   return app;
