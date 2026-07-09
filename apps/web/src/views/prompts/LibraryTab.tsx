@@ -1,4 +1,4 @@
-import type { Prompt, PromptInput } from "@holonet/shared";
+import type { Prompt, PromptDetail, PromptInput } from "@holonet/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import {
@@ -13,12 +13,14 @@ import {
 import { errorMessage } from "../../lib/errors.js";
 import { AMBER, CHAKRA, DIM, HI } from "../../lib/theme.js";
 import { inputStyle, NewPromptForm, primaryButton } from "./NewPromptForm.js";
+import { OptimizeModal } from "./OptimizeModal.js";
 import { PromptDrawer } from "./PromptDrawer.js";
 import type { PromptsTabProps } from "./PromptsView.js";
+import { TestRunModal } from "./TestRunModal.js";
 
 type FolderFilter = "all" | "none" | string;
 
-export function LibraryTab({ models: _models, pushToast }: PromptsTabProps) {
+export function LibraryTab({ models, pushToast }: PromptsTabProps) {
   const queryClient = useQueryClient();
   const foldersQuery = useQuery(foldersQueryOptions);
   const promptsQuery = useQuery(promptsQueryOptions);
@@ -35,6 +37,11 @@ export function LibraryTab({ models: _models, pushToast }: PromptsTabProps) {
   const [newFolderName, setNewFolderName] = useState("");
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [optimizing, setOptimizing] = useState<PromptDetail | null>(null);
+  const [testRun, setTestRun] = useState<{
+    content: string;
+    schemaId: string | null;
+  } | null>(null);
 
   function invalidateLibrary() {
     queryClient.invalidateQueries({ queryKey: ["folders"] });
@@ -368,8 +375,25 @@ export function LibraryTab({ models: _models, pushToast }: PromptsTabProps) {
           schemas={schemas}
           onClose={() => setOpenId(null)}
           pushToast={pushToast}
-          onOptimize={() => {}}
-          onTestRun={() => {}}
+          onOptimize={(detail) => setOptimizing(detail)}
+          onTestRun={(content, schemaId) => setTestRun({ content, schemaId })}
+        />
+      )}
+      {optimizing && (
+        <OptimizeModal
+          detail={optimizing}
+          models={models}
+          onClose={() => setOptimizing(null)}
+          pushToast={pushToast}
+        />
+      )}
+      {testRun && (
+        <TestRunModal
+          content={testRun.content}
+          schemaId={testRun.schemaId}
+          models={models}
+          onClose={() => setTestRun(null)}
+          pushToast={pushToast}
         />
       )}
     </div>
