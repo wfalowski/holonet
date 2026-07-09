@@ -14,6 +14,7 @@ import {
   deleteModel,
   deleteTask,
   modelsQueryOptions,
+  promptsQueryOptions,
   runsQueryOptions,
   runTaskNow,
   tasksQueryOptions,
@@ -29,6 +30,7 @@ import { useToasts } from "../lib/useToasts.js";
 import { ActivityView } from "../views/ActivityView.js";
 import { IntegrationsView } from "../views/IntegrationsView.js";
 import { OverviewView } from "../views/OverviewView.js";
+import { PromptsView } from "../views/prompts/PromptsView.js";
 import { SettingsView } from "../views/SettingsView.js";
 import { TasksView } from "../views/TasksView.js";
 import { Rail } from "./Rail.js";
@@ -51,6 +53,7 @@ export function Console() {
   const tasksQuery = useQuery(tasksQueryOptions);
   const runsQuery = useQuery(runsQueryOptions());
   const modelsQuery = useQuery(modelsQueryOptions);
+  const promptsQuery = useQuery(promptsQueryOptions);
   const tasks = tasksQuery.data ?? [];
   const runs = runsQuery.data ?? [];
   const models = modelsQuery.data ?? [];
@@ -170,6 +173,7 @@ export function Console() {
         onNavigate={setView}
         tasksCount={tasks.length}
         runsCount={runs.length}
+        promptsCount={promptsQuery.data?.length ?? 0}
       />
 
       <div
@@ -208,6 +212,9 @@ export function Console() {
           )}
           {view === "integrations" && <IntegrationsView tasks={tasks} />}
           {view === "activity" && <ActivityView runs={runs} />}
+          {view === "prompts" && (
+            <PromptsView models={models} pushToast={pushToast} />
+          )}
           {view === "settings" && (
             <SettingsView
               models={models}

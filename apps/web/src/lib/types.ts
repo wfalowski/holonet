@@ -3,6 +3,7 @@ export type ViewId =
   | "tasks"
   | "integrations"
   | "activity"
+  | "prompts"
   | "settings";
 
 export type FilterId = "all" | "active" | "paused";

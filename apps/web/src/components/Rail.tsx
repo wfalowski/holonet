@@ -13,15 +13,28 @@ interface RailProps {
   onNavigate: (view: ViewId) => void;
   tasksCount: number;
   runsCount: number;
+  promptsCount: number;
 }
 
-export function Rail({ view, onNavigate, tasksCount, runsCount }: RailProps) {
+export function Rail({
+  view,
+  onNavigate,
+  tasksCount,
+  runsCount,
+  promptsCount,
+}: RailProps) {
   const navDefs: NavDef[] = [
     { id: "overview", code: "01", label: "OVERVIEW", count: "" },
     { id: "tasks", code: "02", label: "CRON TASKS", count: String(tasksCount) },
     { id: "integrations", code: "03", label: "INTEGRATIONS", count: "1" },
     { id: "activity", code: "04", label: "ACTIVITY", count: String(runsCount) },
-    { id: "settings", code: "05", label: "SETTINGS", count: "" },
+    {
+      id: "prompts",
+      code: "05",
+      label: "PROMPTS",
+      count: String(promptsCount),
+    },
+    { id: "settings", code: "06", label: "SETTINGS", count: "" },
   ];
 
   return (
