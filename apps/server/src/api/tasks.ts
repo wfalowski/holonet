@@ -55,20 +55,25 @@ export function createTasksRoutes(
     // quoted so Postgres preserves the camelCase keys used below. The generic
     // Db type erases the concrete driver's result shape, so the raw result is
     // cast to the row shape this query is known to produce.
+    //
+    // created_at is selected as epoch millis (float8 → JS number): raw
+    // db.execute bypasses Drizzle's column mapping, and Drizzle disables the
+    // driver's own timestamptz parsing, so selecting the column directly
+    // yields a string, not a Date.
     const result =
-      (await db.execute(sql`SELECT task_id AS "taskId", status, created_at AS "at" FROM (
+      (await db.execute(sql`SELECT task_id AS "taskId", status, (EXTRACT(EPOCH FROM created_at) * 1000)::float8 AS "at" FROM (
         SELECT task_id, status, created_at,
           ROW_NUMBER() OVER (PARTITION BY task_id ORDER BY created_at DESC, id DESC) AS rn
         FROM runs WHERE task_id IS NOT NULL
       ) latest WHERE rn = 1`)) as {
-        rows: Array<{ taskId: string; status: string; at: Date }>;
+        rows: Array<{ taskId: string; status: string; at: number }>;
       };
     const latest = result.rows;
 
     const lastRunByTask = new Map<string, LastRun>();
     for (const r of latest) {
       lastRunByTask.set(r.taskId, {
-        at: r.at.getTime(),
+        at: r.at,
         status: r.status as RunStatus,
       });
     }

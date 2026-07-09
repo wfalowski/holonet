@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { runs } from "../db/schema.js";
 import { buildApp, loginHeaders } from "./test-helpers.js";
 
 const validTask = {
@@ -72,6 +73,41 @@ test("tasks API: create -> list -> toggle -> delete, guarded by auth", async () 
   const emptyRes = await app.request("/api/tasks", { headers: auth });
   const empty = (await emptyRes.json()) as unknown[];
   assert.equal(empty.length, 0);
+
+  scheduler.stop();
+});
+
+test("tasks list includes lastRun once a run row exists", async () => {
+  const { app, db, scheduler } = await buildApp();
+  const auth = await loginHeaders(app);
+
+  const createRes = await app.request("/api/tasks", {
+    method: "POST",
+    headers: { ...auth, "Content-Type": "application/json" },
+    body: JSON.stringify(validTask),
+  });
+  assert.equal(createRes.status, 201);
+  const created = (await createRes.json()) as { id: string };
+
+  const runAt = new Date("2026-07-08T10:00:00.000Z");
+  await db.insert(runs).values({
+    taskId: created.id,
+    taskName: validTask.name,
+    channel: validTask.channel,
+    status: "ok",
+    message: "done",
+    durationMs: 1234,
+    createdAt: runAt,
+  });
+
+  const listRes = await app.request("/api/tasks", { headers: auth });
+  assert.equal(listRes.status, 200);
+  const list = (await listRes.json()) as {
+    lastRun: { at: number; status: string } | null;
+  }[];
+  assert.equal(list.length, 1);
+  assert.equal(list[0]?.lastRun?.status, "ok");
+  assert.equal(list[0]?.lastRun?.at, runAt.getTime());
 
   scheduler.stop();
 });

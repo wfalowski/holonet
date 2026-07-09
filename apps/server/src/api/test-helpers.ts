@@ -26,7 +26,7 @@ export async function buildApp() {
   const executor = createExecutor({ db, config, logger });
   const scheduler = createScheduler({ db, executor, logger });
   const app = createApp({ db, config, scheduler, executor });
-  return { app, scheduler };
+  return { app, db, scheduler };
 }
 
 /** Log in and return the session-cookie headers for authenticated requests. */
