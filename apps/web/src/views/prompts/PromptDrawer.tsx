@@ -1,7 +1,7 @@
 import type { Folder, PromptDetail, SchemaDoc } from "@holonet/shared";
 import { lineDiff } from "@holonet/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   createPromptVersion,
   deletePrompt,
@@ -47,13 +47,24 @@ export function PromptDrawer({
   const [note, setNote] = useState("");
   const [diffVersionId, setDiffVersionId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+    };
+  }, []);
 
   // Seed the editor once per loaded head version; user edits are not clobbered
-  // by background refetches because the key includes the version id.
-  const headId = head?.id;
+  // by background refetches because the seed key is the version id, not
+  // object identity.
+  const seededVersionRef = useRef<string | null>(null);
   useEffect(() => {
-    if (headId && head) setContent(head.content);
-  }, [headId, head]);
+    if (head && seededVersionRef.current !== head.id) {
+      seededVersionRef.current = head.id;
+      setContent(head.content);
+    }
+  }, [head]);
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ["prompts"] });
@@ -283,7 +294,12 @@ export function PromptDrawer({
               if (confirmDelete) deleteMutation.mutate();
               else {
                 setConfirmDelete(true);
-                setTimeout(() => setConfirmDelete(false), 2500);
+                if (confirmTimerRef.current)
+                  clearTimeout(confirmTimerRef.current);
+                confirmTimerRef.current = setTimeout(
+                  () => setConfirmDelete(false),
+                  2500,
+                );
               }
             }}
           >
@@ -366,9 +382,10 @@ export function PromptDrawer({
                 margin: 0,
               }}
             >
-              {lineDiff(diffVersion.content, head.content).map((line) => (
+              {lineDiff(diffVersion.content, head.content).map((line, i) => (
                 <div
-                  key={`${line.kind}-${line.text}`}
+                  // biome-ignore lint/suspicious/noArrayIndexKey: kind+text alone isn't unique for repeated lines; diff list is static (no reordering)
+                  key={`${i}-${line.kind}-${line.text}`}
                   style={{
                     color:
                       line.kind === "add" ? OK : line.kind === "del" ? BAD : HI,
