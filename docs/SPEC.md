@@ -388,8 +388,9 @@ edited away (new version) or the whole prompt deleted after the experiment runs 
   version history view to render add/del/same lines between two prompt versions.
 - Zod schemas for every request/response shape above (`FolderInputSchema`, `PromptInputSchema`,
   `PromptMetaUpdateSchema`, `PromptVersionInputSchema`, `OptimizeInputSchema`,
-  `SchemaDocInputSchema`, `PlaygroundRunInputSchema`, `ExperimentInputSchema`, …) live in
-  `packages/shared/src/schemas.ts` / `prompting.ts` alongside the existing Task/Model/Run schemas.
+  `SchemaDocInputSchema`, `PlaygroundRunInputSchema`, `ExperimentInputSchema`, `SchemaFieldSchema`,
+  …) live in `packages/shared/src/prompting.ts`, alongside the existing Task/Model/Run schemas in
+  `schemas.ts`.
 
 ### Frontend
 
