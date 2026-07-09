@@ -12,12 +12,7 @@ import {
 } from "../../api/client.js";
 import { errorMessage } from "../../lib/errors.js";
 import { AMBER, CHAKRA, DIM, HI } from "../../lib/theme.js";
-import {
-  ghostButton,
-  inputStyle,
-  NewPromptForm,
-  primaryButton,
-} from "./NewPromptForm.js";
+import { inputStyle, NewPromptForm, primaryButton } from "./NewPromptForm.js";
 import type { PromptsTabProps } from "./PromptsView.js";
 
 type FolderFilter = "all" | "none" | string;

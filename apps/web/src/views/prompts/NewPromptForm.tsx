@@ -68,6 +68,7 @@ export function NewPromptForm({
       setError("NAME AND CONTENT ARE REQUIRED");
       return;
     }
+    setError(null);
     onCreate({
       name: name.trim(),
       folderId: folderId === "" ? null : folderId,
