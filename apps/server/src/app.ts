@@ -5,6 +5,7 @@ import { HTTPException } from "hono/http-exception";
 import { createFoldersRoutes } from "./api/folders.js";
 import { createModelsRoutes } from "./api/models.js";
 import { createRunsRoutes } from "./api/runs.js";
+import { createSchemasRoutes } from "./api/schemas.js";
 import { createTasksRoutes } from "./api/tasks.js";
 import { authMiddleware } from "./auth/middleware.js";
 import { createAuthRoutes } from "./auth/routes.js";
@@ -73,6 +74,7 @@ export function createApp({
   api.route("/models", createModelsRoutes(db));
   api.route("/folders", createFoldersRoutes(db));
   api.route("/runs", createRunsRoutes(db));
+  api.route("/schemas", createSchemasRoutes(db));
   app.route("/api", api);
 
   app.use(
