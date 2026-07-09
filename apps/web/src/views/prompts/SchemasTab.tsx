@@ -128,8 +128,8 @@ export function SchemasTab({ models, pushToast }: PromptsTabProps) {
           <div style={fieldLabel}>FIELDS</div>
           {editor.fields.map((field, i) => (
             <FieldEditor
-              // biome-ignore lint/suspicious/noArrayIndexKey: field name alone isn't unique/stable while editing; index scoping is acceptable here
-              key={`${i}-${field.name}`}
+              // biome-ignore lint/suspicious/noArrayIndexKey: index keys are correct here: rows have no stable id and the name is live-edited (embedding it in the key remounts the input on every keystroke)
+              key={i}
               field={field}
               depth={0}
               onChange={(next) => {
