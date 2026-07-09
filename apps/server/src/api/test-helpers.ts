@@ -8,6 +8,10 @@ import { loadConfig } from "../config.js";
 import * as schema from "../db/schema.js";
 import { logger } from "../logger.js";
 import { createExecutor } from "../scheduler/executor.js";
+import {
+  type CompleteFn,
+  createExperimentRunner,
+} from "../scheduler/experimentRunner.js";
 import { createScheduler } from "../scheduler/scheduler.js";
 
 const MIGRATIONS = fileURLToPath(new URL("../../drizzle", import.meta.url));
@@ -15,7 +19,7 @@ const MIGRATIONS = fileURLToPath(new URL("../../drizzle", import.meta.url));
 export const TEST_APP_KEY = "test-app-key-123456";
 
 /** Fresh in-memory Postgres + migrated schema + fully wired Hono app. */
-export async function buildApp() {
+export async function buildApp(overrides?: { complete?: CompleteFn }) {
   const client = new PGlite();
   const db = drizzle(client, { schema });
   await migrate(db, { migrationsFolder: MIGRATIONS });
@@ -25,8 +29,14 @@ export async function buildApp() {
   });
   const executor = createExecutor({ db, config, logger });
   const scheduler = createScheduler({ db, executor, logger });
-  const app = createApp({ db, config, scheduler, executor });
-  return { app, db, scheduler };
+  const experimentRunner = createExperimentRunner({
+    db,
+    config,
+    logger,
+    complete: overrides?.complete,
+  });
+  const app = createApp({ db, config, scheduler, executor, experimentRunner });
+  return { app, db, scheduler, experimentRunner };
 }
 
 /** Log in and return the session-cookie headers for authenticated requests. */

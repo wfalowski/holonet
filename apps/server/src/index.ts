@@ -7,6 +7,10 @@ import { loadConfig } from "./config.js";
 import { closeDb, createDb } from "./db/index.js";
 import { logger } from "./logger.js";
 import { createExecutor } from "./scheduler/executor.js";
+import {
+  createExperimentRunner,
+  recoverInterruptedExperiments,
+} from "./scheduler/experimentRunner.js";
 import { createScheduler } from "./scheduler/scheduler.js";
 
 // apps/server/src/index.ts and its compiled apps/server/dist/index.js are both
@@ -41,6 +45,9 @@ async function main() {
   await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
   logger.info("database migrated");
 
+  await recoverInterruptedExperiments(db, logger);
+  const experimentRunner = createExperimentRunner({ db, config, logger });
+
   const executor = createExecutor({ db, config, logger });
   const scheduler = createScheduler({ db, executor, logger });
   try {
@@ -49,7 +56,7 @@ async function main() {
     logger.error({ err }, "scheduler failed to start");
   }
 
-  const app = createApp({ db, config, scheduler, executor });
+  const app = createApp({ db, config, scheduler, executor, experimentRunner });
 
   const server = serve({ fetch: app.fetch, port: config.port }, (info) => {
     logger.info({ port: info.port }, "holonet server listening");

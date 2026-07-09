@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
+import { createExperimentsRoutes } from "./api/experiments.js";
 import { createFoldersRoutes } from "./api/folders.js";
 import { createModelsRoutes } from "./api/models.js";
 import { createPlaygroundRoutes } from "./api/playground.js";
@@ -15,6 +16,7 @@ import type { Config } from "./config.js";
 import type { Db } from "./db/index.js";
 import { logger } from "./logger.js";
 import type { Executor } from "./scheduler/executor.js";
+import type { ExperimentRunner } from "./scheduler/experimentRunner.js";
 import type { Scheduler } from "./scheduler/scheduler.js";
 
 export interface AppDeps {
@@ -22,6 +24,7 @@ export interface AppDeps {
   config: Config;
   scheduler: Scheduler;
   executor: Executor;
+  experimentRunner: ExperimentRunner;
 }
 
 type AppEnv = { Variables: { requestId: string } };
@@ -31,6 +34,7 @@ export function createApp({
   config,
   scheduler,
   executor,
+  experimentRunner,
 }: AppDeps): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
 
@@ -79,6 +83,7 @@ export function createApp({
   api.route("/runs", createRunsRoutes(db));
   api.route("/schemas", createSchemasRoutes(db));
   api.route("/playground", createPlaygroundRoutes(db, config));
+  api.route("/experiments", createExperimentsRoutes(db, experimentRunner));
   app.route("/api", api);
 
   app.use(
