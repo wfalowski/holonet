@@ -131,9 +131,10 @@ export function OptimizeModal({
               margin: "0 0 12px",
             }}
           >
-            {lineDiff(head.content, result.improved).map((line) => (
+            {lineDiff(head.content, result.improved).map((line, i) => (
               <div
-                key={`${line.kind}-${line.text}`}
+                // biome-ignore lint/suspicious/noArrayIndexKey: kind+text alone isn't unique for repeated lines; diff list is static (no reordering)
+                key={`${i}-${line.kind}-${line.text}`}
                 style={{
                   color:
                     line.kind === "add" ? OK : line.kind === "del" ? BAD : HI,
