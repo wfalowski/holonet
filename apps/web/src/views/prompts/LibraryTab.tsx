@@ -13,6 +13,7 @@ import {
 import { errorMessage } from "../../lib/errors.js";
 import { AMBER, CHAKRA, DIM, HI } from "../../lib/theme.js";
 import { inputStyle, NewPromptForm, primaryButton } from "./NewPromptForm.js";
+import { PromptDrawer } from "./PromptDrawer.js";
 import type { PromptsTabProps } from "./PromptsView.js";
 
 type FolderFilter = "all" | "none" | string;
@@ -358,6 +359,19 @@ export function LibraryTab({ models: _models, pushToast }: PromptsTabProps) {
           ))
         )}
       </div>
+
+      {openId && (
+        <PromptDrawer
+          key={openId}
+          promptId={openId}
+          folders={folders}
+          schemas={schemas}
+          onClose={() => setOpenId(null)}
+          pushToast={pushToast}
+          onOptimize={() => {}}
+          onTestRun={() => {}}
+        />
+      )}
     </div>
   );
 }
