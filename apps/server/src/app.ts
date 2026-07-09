@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { createFoldersRoutes } from "./api/folders.js";
 import { createModelsRoutes } from "./api/models.js";
+import { createPlaygroundRoutes } from "./api/playground.js";
 import { createPromptsRoutes } from "./api/prompts.js";
 import { createRunsRoutes } from "./api/runs.js";
 import { createSchemasRoutes } from "./api/schemas.js";
@@ -77,6 +78,7 @@ export function createApp({
   api.route("/prompts", createPromptsRoutes(db, config));
   api.route("/runs", createRunsRoutes(db));
   api.route("/schemas", createSchemasRoutes(db));
+  api.route("/playground", createPlaygroundRoutes(db, config));
   app.route("/api", api);
 
   app.use(
