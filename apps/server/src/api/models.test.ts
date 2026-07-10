@@ -151,3 +151,103 @@ test("models API: CRUD, seed, conflicts, task membership check", async () => {
 
   scheduler.stop();
 });
+
+test("models API: pricing fields", async () => {
+  const { app, scheduler } = await buildApp();
+  const auth = await loginHeaders(app);
+
+  // Seeded models have no prices.
+  const seeded = await app.request("/api/models", { headers: auth });
+  const seededList = (await seeded.json()) as {
+    inputCostPerMTok: number | null;
+    outputCostPerMTok: number | null;
+  }[];
+  assert.ok(seededList.every((m) => m.inputCostPerMTok === null));
+  assert.ok(seededList.every((m) => m.outputCostPerMTok === null));
+
+  // Create with prices.
+  const createRes = await app.request("/api/models", {
+    method: "POST",
+    headers: { ...auth, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      modelId: "openai/gpt-5.2",
+      label: "GPT 5.2",
+      family: "OPENAI",
+      inputCostPerMTok: 1.25,
+      outputCostPerMTok: 10,
+    }),
+  });
+  assert.equal(createRes.status, 201);
+  const created = (await createRes.json()) as {
+    id: string;
+    inputCostPerMTok: number | null;
+    outputCostPerMTok: number | null;
+  };
+  assert.equal(created.inputCostPerMTok, 1.25);
+  assert.equal(created.outputCostPerMTok, 10);
+
+  // Create without prices defaults to null.
+  const bare = await app.request("/api/models", {
+    method: "POST",
+    headers: { ...auth, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      modelId: "openai/o5",
+      label: "O5",
+      family: "OPENAI",
+    }),
+  });
+  assert.equal(bare.status, 201);
+  const bareBody = (await bare.json()) as { inputCostPerMTok: number | null };
+  assert.equal(bareBody.inputCostPerMTok, null);
+
+  // Negative price rejected.
+  const neg = await app.request("/api/models", {
+    method: "POST",
+    headers: { ...auth, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      modelId: "openai/gpt-neg",
+      label: "NEG",
+      family: "OPENAI",
+      inputCostPerMTok: -1,
+    }),
+  });
+  assert.equal(neg.status, 400);
+
+  // PATCH updates prices; omitting a field leaves it unchanged.
+  const patch = await app.request(`/api/models/${created.id}`, {
+    method: "PATCH",
+    headers: { ...auth, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      label: "GPT 5.2",
+      family: "OPENAI",
+      inputCostPerMTok: 2.5,
+    }),
+  });
+  assert.equal(patch.status, 200);
+  const patched = (await patch.json()) as {
+    inputCostPerMTok: number | null;
+    outputCostPerMTok: number | null;
+  };
+  assert.equal(patched.inputCostPerMTok, 2.5);
+  assert.equal(patched.outputCostPerMTok, 10);
+
+  // PATCH with null clears a price.
+  const clear = await app.request(`/api/models/${created.id}`, {
+    method: "PATCH",
+    headers: { ...auth, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      label: "GPT 5.2",
+      family: "OPENAI",
+      outputCostPerMTok: null,
+    }),
+  });
+  assert.equal(clear.status, 200);
+  const cleared = (await clear.json()) as {
+    inputCostPerMTok: number | null;
+    outputCostPerMTok: number | null;
+  };
+  assert.equal(cleared.inputCostPerMTok, 2.5);
+  assert.equal(cleared.outputCostPerMTok, null);
+
+  scheduler.stop();
+});

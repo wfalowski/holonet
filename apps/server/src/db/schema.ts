@@ -1,6 +1,7 @@
 import type { SchemaField } from "@holonet/shared";
 import {
   boolean,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -53,6 +54,8 @@ export const models = pgTable("models", {
   modelId: text("model_id").notNull().unique(),
   label: text("label").notNull(),
   family: text("family").notNull(),
+  inputCostPerMTok: doublePrecision("input_cost_per_mtok"),
+  outputCostPerMTok: doublePrecision("output_cost_per_mtok"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

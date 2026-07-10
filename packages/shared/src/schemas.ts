@@ -17,6 +17,8 @@ export const ModelInputSchema = z.object({
     .regex(MODEL_ID_RE, "Expected an OpenRouter model id like vendor/model"),
   label: z.string().trim().min(1).max(40),
   family: z.string().trim().min(1).max(20),
+  inputCostPerMTok: z.number().nonnegative().nullish(),
+  outputCostPerMTok: z.number().nonnegative().nullish(),
 });
 export type ModelInput = z.infer<typeof ModelInputSchema>;
 
@@ -28,6 +30,8 @@ export const ModelSchema = z.object({
   modelId: z.string(),
   label: z.string(),
   family: z.string(),
+  inputCostPerMTok: z.number().nullable(),
+  outputCostPerMTok: z.number().nullable(),
   createdAt: z.number(),
   inUse: z.number(),
 });

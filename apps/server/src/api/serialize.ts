@@ -52,6 +52,8 @@ export function rowToModel(row: ModelRow, inUse: number): Model {
     modelId: row.modelId,
     label: row.label,
     family: row.family,
+    inputCostPerMTok: row.inputCostPerMTok,
+    outputCostPerMTok: row.outputCostPerMTok,
     createdAt: row.createdAt.getTime(),
     inUse,
   };
