@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { afterEach, mock, test } from "node:test";
 import { buildApp, loginHeaders } from "./test-helpers.js";
+
+afterEach(() => mock.restoreAll());
 
 const validTask = {
   name: "Test Task",
@@ -248,6 +250,86 @@ test("models API: pricing fields", async () => {
   };
   assert.equal(cleared.inputCostPerMTok, 2.5);
   assert.equal(cleared.outputCostPerMTok, null);
+
+  scheduler.stop();
+});
+
+function pricingResponse(body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+test("models API: sync-pricing updates matched models from OpenRouter", async () => {
+  const { app, scheduler } = await buildApp();
+  const auth = await loginHeaders(app);
+
+  mock.method(globalThis, "fetch", async () =>
+    pricingResponse({
+      data: [
+        {
+          id: "anthropic/claude-sonnet-4.5",
+          pricing: { prompt: "0.000003", completion: "0.000015" },
+        },
+        {
+          id: "anthropic/claude-opus-4.1",
+          pricing: { prompt: "not-a-number", completion: "0.000075" },
+        },
+        {
+          id: "some/other-model",
+          pricing: { prompt: "0.000001", completion: "0.000002" },
+        },
+      ],
+    }),
+  );
+
+  const res = await app.request("/api/models/sync-pricing", {
+    method: "POST",
+    headers: auth,
+  });
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as { updated: string[]; notFound: string[] };
+  assert.deepEqual(body.updated, ["anthropic/claude-sonnet-4.5"]);
+  // Unmatched on OpenRouter, or matched with unparsable pricing.
+  assert.deepEqual(body.notFound, [
+    "anthropic/claude-opus-4.1",
+    "x-ai/grok-3",
+    "x-ai/grok-4",
+  ]);
+
+  const list = await app.request("/api/models", { headers: auth });
+  const listBody = (await list.json()) as {
+    modelId: string;
+    inputCostPerMTok: number | null;
+    outputCostPerMTok: number | null;
+  }[];
+  const sonnet = listBody.find(
+    (m) => m.modelId === "anthropic/claude-sonnet-4.5",
+  );
+  assert.equal(sonnet?.inputCostPerMTok, 3);
+  assert.equal(sonnet?.outputCostPerMTok, 15);
+  const opus = listBody.find((m) => m.modelId === "anthropic/claude-opus-4.1");
+  assert.equal(opus?.inputCostPerMTok, null);
+
+  scheduler.stop();
+});
+
+test("models API: sync-pricing returns 502 when OpenRouter is down", async () => {
+  const { app, scheduler } = await buildApp();
+  const auth = await loginHeaders(app);
+
+  mock.method(globalThis, "fetch", async () => {
+    throw new Error("network down");
+  });
+
+  const res = await app.request("/api/models/sync-pricing", {
+    method: "POST",
+    headers: auth,
+  });
+  assert.equal(res.status, 502);
+  const body = (await res.json()) as { error: { code: string } };
+  assert.equal(body.error.code, "UPSTREAM");
 
   scheduler.stop();
 });
