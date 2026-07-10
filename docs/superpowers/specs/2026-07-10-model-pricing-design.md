@@ -66,8 +66,8 @@ outputCostPerMTok: doublePrecision("output_cost_per_mtok"),
 ## Web UI (`apps/web/src/views/SettingsView.tsx`)
 
 - Models list: two new columns, "In $/1M" and "Out $/1M". Values formatted
-  with up to 2 decimal places (show more digits only when < 0.01, e.g. 0.075
-  stays 0.075); em dash (—) when null.
+  with up to 3 decimal places, trailing zeros dropped (3 → "3", 0.075 →
+  "0.075"; values < 0.001 shown as-is); em dash (—) when null.
 - Add form and edit form: two optional numeric inputs ("Input $/1M",
   "Output $/1M"). Empty input submits null.
 - "Sync prices from OpenRouter" button near the list header. While running it
