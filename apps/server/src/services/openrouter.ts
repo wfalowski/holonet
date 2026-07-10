@@ -38,15 +38,17 @@ export interface ChatCompletionDetails {
 }
 
 const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
-const TIMEOUT_MS = 120_000;
+// Reasoning models can think for many minutes before emitting the (non-streamed)
+// response, so the ceiling must be generous.
+const TIMEOUT_MS = 600_000;
 
 interface ChatCompletionResponse {
   choices?: { message?: { content?: string } }[];
   usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number };
 }
 
-// POST to OpenRouter chat-completions. Enforces a 120s ceiling merged with any
-// caller signal and rejects on non-2xx. Never embeds the API key in thrown errors.
+// POST to OpenRouter chat-completions. Enforces a 10-minute ceiling merged with
+// any caller signal and rejects on non-2xx. Never embeds the API key in thrown errors.
 async function request(
   apiKey: string,
   body: Record<string, unknown>,
