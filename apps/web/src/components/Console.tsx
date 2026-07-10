@@ -17,6 +17,7 @@ import {
   promptsQueryOptions,
   runsQueryOptions,
   runTaskNow,
+  syncModelPricing,
   tasksQueryOptions,
   toggleTask,
   updateModel,
@@ -136,6 +137,12 @@ export function Console() {
     onError: (error) => pushToast(errorMessage(error)),
   });
 
+  const syncPricingMutation = useMutation({
+    mutationFn: () => syncModelPricing(),
+    onSuccess: invalidateModels,
+    onError: (error) => pushToast(errorMessage(error)),
+  });
+
   const activeCount = tasks.filter((t) => t.enabled).length;
   const upcomingRaw = tasks
     .filter((t) => t.enabled && t.nextRunAt != null)
@@ -223,6 +230,8 @@ export function Console() {
                 updateModelMutation.mutate({ id, input })
               }
               onDelete={(id) => deleteModelMutation.mutate(id)}
+              onSyncPricing={() => syncPricingMutation.mutateAsync()}
+              isSyncing={syncPricingMutation.isPending}
               isSaving={
                 createModelMutation.isPending ||
                 updateModelMutation.isPending ||

@@ -145,6 +145,15 @@ export function deleteModel(id: string) {
   return api.delete<void>(`/api/models/${id}`);
 }
 
+export interface SyncPricingResult {
+  updated: string[];
+  notFound: string[];
+}
+
+export function syncModelPricing() {
+  return api.post<SyncPricingResult>("/api/models/sync-pricing");
+}
+
 export const foldersQueryOptions = queryOptions({
   queryKey: ["folders"] as const,
   queryFn: () => api.get<Folder[]>("/api/folders"),

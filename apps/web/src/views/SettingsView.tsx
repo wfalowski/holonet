@@ -66,7 +66,25 @@ interface SettingsViewProps {
   onCreate: (input: ModelInput) => Promise<unknown>;
   onUpdate: (id: string, input: ModelUpdate) => void;
   onDelete: (id: string) => void;
+  onSyncPricing: () => Promise<{ updated: string[]; notFound: string[] }>;
   isSaving: boolean;
+  isSyncing: boolean;
+}
+
+// USD per 1M tokens, up to 3 decimals, trailing zeros dropped; null → em dash.
+function fmtPrice(v: number | null): string {
+  if (v === null) return "—";
+  if (v >= 0.001) return String(Math.round(v * 1000) / 1000);
+  return String(v);
+}
+
+// "" → null; invalid or negative → undefined (caller treats as form error).
+function parsePrice(raw: string): number | null | undefined {
+  const s = raw.trim();
+  if (s === "") return null;
+  const n = Number(s);
+  if (!Number.isFinite(n) || n < 0) return undefined;
+  return n;
 }
 
 export function SettingsView({
@@ -74,17 +92,27 @@ export function SettingsView({
   onCreate,
   onUpdate,
   onDelete,
+  onSyncPricing,
   isSaving,
+  isSyncing,
 }: SettingsViewProps) {
   const [addForm, setAddForm] = useState({
     modelId: "",
     label: "",
     family: "",
+    inputCost: "",
+    outputCost: "",
   });
   const [showAddErrors, setShowAddErrors] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ label: "", family: "" });
+  const [editForm, setEditForm] = useState({
+    label: "",
+    family: "",
+    inputCost: "",
+    outputCost: "",
+  });
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
   const deleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(
@@ -97,18 +125,36 @@ export function SettingsView({
   const modelIdErr = showAddErrors && !MODEL_ID_RE.test(addForm.modelId.trim());
   const labelErr = showAddErrors && !addForm.label.trim();
   const familyErr = showAddErrors && !addForm.family.trim();
+  const inputCostErr =
+    showAddErrors && parsePrice(addForm.inputCost) === undefined;
+  const outputCostErr =
+    showAddErrors && parsePrice(addForm.outputCost) === undefined;
 
   function handleAdd() {
     const modelId = addForm.modelId.trim();
     const label = addForm.label.trim();
     const family = addForm.family.trim();
-    if (!MODEL_ID_RE.test(modelId) || !label || !family) {
+    const inputCostPerMTok = parsePrice(addForm.inputCost);
+    const outputCostPerMTok = parsePrice(addForm.outputCost);
+    if (
+      !MODEL_ID_RE.test(modelId) ||
+      !label ||
+      !family ||
+      inputCostPerMTok === undefined ||
+      outputCostPerMTok === undefined
+    ) {
       setShowAddErrors(true);
       return;
     }
-    onCreate({ modelId, label, family })
+    onCreate({ modelId, label, family, inputCostPerMTok, outputCostPerMTok })
       .then(() => {
-        setAddForm({ modelId: "", label: "", family: "" });
+        setAddForm({
+          modelId: "",
+          label: "",
+          family: "",
+          inputCost: "",
+          outputCost: "",
+        });
         setShowAddErrors(false);
       })
       .catch(() => {
@@ -118,15 +164,45 @@ export function SettingsView({
 
   function startEdit(m: Model) {
     setEditingId(m.id);
-    setEditForm({ label: m.label, family: m.family });
+    setEditForm({
+      label: m.label,
+      family: m.family,
+      inputCost: m.inputCostPerMTok === null ? "" : String(m.inputCostPerMTok),
+      outputCost:
+        m.outputCostPerMTok === null ? "" : String(m.outputCostPerMTok),
+    });
   }
 
   function handleEditSave(id: string) {
     const label = editForm.label.trim();
     const family = editForm.family.trim();
-    if (!label || !family) return;
-    onUpdate(id, { label, family });
+    const inputCostPerMTok = parsePrice(editForm.inputCost);
+    const outputCostPerMTok = parsePrice(editForm.outputCost);
+    if (
+      !label ||
+      !family ||
+      inputCostPerMTok === undefined ||
+      outputCostPerMTok === undefined
+    )
+      return;
+    onUpdate(id, { label, family, inputCostPerMTok, outputCostPerMTok });
     setEditingId(null);
+  }
+
+  function handleSync() {
+    setSyncStatus(null);
+    onSyncPricing()
+      .then((r) => {
+        const notFound =
+          r.notFound.length > 0
+            ? ` · NOT ON OPENROUTER: ${r.notFound.join(", ")}`
+            : "";
+        setSyncStatus(`UPDATED ${r.updated.length} MODEL(S)${notFound}`);
+      })
+      .catch(() => {
+        // error toast is handled by the mutation's onError
+        setSyncStatus("SYNC FAILED");
+      });
   }
 
   function handleDeleteClick(id: string) {
@@ -183,6 +259,31 @@ export function SettingsView({
           ids (vendor/model). A model in use by a task cannot be removed.
         </div>
 
+        <div
+          style={{
+            marginTop: "12px",
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+          }}
+        >
+          <button
+            type="button"
+            onClick={handleSync}
+            disabled={isSyncing}
+            style={{ ...smallButton, opacity: isSyncing ? 0.5 : 1 }}
+          >
+            {isSyncing ? "SYNCING…" : "SYNC PRICES FROM OPENROUTER"}
+          </button>
+          {syncStatus && (
+            <span
+              style={{ fontSize: "9px", letterSpacing: ".1em", color: DIM }}
+            >
+              {syncStatus}
+            </span>
+          )}
+        </div>
+
         <div style={{ marginTop: "16px" }}>
           {models.length === 0 && (
             <div
@@ -229,6 +330,30 @@ export function SettingsView({
                       maxLength={20}
                       aria-label="Model family"
                       style={{ ...fieldInput(false), width: "120px" }}
+                    />
+                    <input
+                      value={editForm.inputCost}
+                      onChange={(e) =>
+                        setEditForm((f) => ({
+                          ...f,
+                          inputCost: e.target.value,
+                        }))
+                      }
+                      inputMode="decimal"
+                      aria-label="Input cost per 1M tokens"
+                      style={{ ...fieldInput(false), width: "70px" }}
+                    />
+                    <input
+                      value={editForm.outputCost}
+                      onChange={(e) =>
+                        setEditForm((f) => ({
+                          ...f,
+                          outputCost: e.target.value,
+                        }))
+                      }
+                      inputMode="decimal"
+                      aria-label="Output cost per 1M tokens"
+                      style={{ ...fieldInput(false), width: "70px" }}
                     />
                     <span
                       style={{
@@ -302,6 +427,24 @@ export function SettingsView({
                       {m.modelId}
                     </span>
                     <span
+                      title="USD per 1M tokens (input / output)"
+                      style={{
+                        fontSize: "9.5px",
+                        letterSpacing: ".06em",
+                        color:
+                          m.inputCostPerMTok !== null ||
+                          m.outputCostPerMTok !== null
+                            ? HI
+                            : DIM,
+                        width: "110px",
+                        flex: "none",
+                        textAlign: "right",
+                      }}
+                    >
+                      {fmtPrice(m.inputCostPerMTok)} /{" "}
+                      {fmtPrice(m.outputCostPerMTok)} $
+                    </span>
+                    <span
                       style={{
                         fontSize: "8.5px",
                         letterSpacing: ".14em",
@@ -356,7 +499,7 @@ export function SettingsView({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1.5fr 1fr 0.8fr auto",
+            gridTemplateColumns: "1.5fr 1fr 0.8fr 0.6fr 0.6fr auto",
             gap: "10px",
             alignItems: "end",
             marginTop: "10px",
@@ -413,6 +556,42 @@ export function SettingsView({
               style={fieldInput(familyErr)}
             />
           </div>
+          <div>
+            <label htmlFor="settings-model-input-cost" style={fieldLabel}>
+              IN $/1M
+            </label>
+            <input
+              id="settings-model-input-cost"
+              value={addForm.inputCost}
+              onChange={(e) =>
+                setAddForm((f) => ({ ...f, inputCost: e.target.value }))
+              }
+              placeholder="e.g. 3"
+              inputMode="decimal"
+              aria-invalid={inputCostErr}
+              aria-describedby={inputCostErr ? "settings-add-error" : undefined}
+              style={fieldInput(inputCostErr)}
+            />
+          </div>
+          <div>
+            <label htmlFor="settings-model-output-cost" style={fieldLabel}>
+              OUT $/1M
+            </label>
+            <input
+              id="settings-model-output-cost"
+              value={addForm.outputCost}
+              onChange={(e) =>
+                setAddForm((f) => ({ ...f, outputCost: e.target.value }))
+              }
+              placeholder="e.g. 3"
+              inputMode="decimal"
+              aria-invalid={outputCostErr}
+              aria-describedby={
+                outputCostErr ? "settings-add-error" : undefined
+              }
+              style={fieldInput(outputCostErr)}
+            />
+          </div>
           <button
             type="button"
             onClick={handleAdd}
@@ -442,7 +621,14 @@ export function SettingsView({
             letterSpacing: ".1em",
             color: BAD,
             marginTop: "6px",
-            height: modelIdErr || labelErr || familyErr ? "auto" : 0,
+            height:
+              modelIdErr ||
+              labelErr ||
+              familyErr ||
+              inputCostErr ||
+              outputCostErr
+                ? "auto"
+                : 0,
             overflow: "hidden",
           }}
         >
@@ -452,7 +638,9 @@ export function SettingsView({
               ? "▸ LABEL REQUIRED"
               : familyErr
                 ? "▸ FAMILY REQUIRED"
-                : ""}
+                : inputCostErr || outputCostErr
+                  ? "▸ PRICE MUST BE A NON-NEGATIVE NUMBER"
+                  : ""}
         </div>
       </div>
     </div>
